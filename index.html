@@ -570,13 +570,11 @@ const CAR_CONFIG = {
 
 const keys = { left: false, right: false, up: false, down: false };
 
-function createToyCar(textureURL, color, type = 'car') {
+function createToyCar(texture, color, type = 'car') {
   const group = new THREE.Group();
   let bodyMat;
-  if (textureURL) {
-    const tex = new THREE.TextureLoader().load(textureURL);
-    tex.needsUpdate = true;
-    bodyMat = new THREE.MeshLambertMaterial({ map: tex });
+  if (texture) {
+    bodyMat = new THREE.MeshLambertMaterial({ map: texture });
   } else {
     bodyMat = new THREE.MeshLambertMaterial({ color });
   }
@@ -648,7 +646,7 @@ function createToyCar(textureURL, color, type = 'car') {
   return group;
 }
 
-function buildScene(bodyColor) {
+function buildScene(paintTexture) {
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x87CEEB, 80, 200);
 
@@ -677,21 +675,27 @@ function buildScene(bodyColor) {
   addDecorations();
 
   // Player car
-  playerCar = createToyCar(null, bodyColor, currentVehicle);
+  playerCar = createToyCar(paintTexture, null, currentVehicle);
   playerCar.position.set(60, 0.1, 4);
   scene.add(playerCar);
   playerState = { speed: 0, lap: 0, passedHalf: false, finished: false };
 
-  // CPU cars (種類はランダムで賑やかに)
-  const cpuTypes = ['truck', 'bus', 'fire', 'car'];
-  const offsets = [0, 2, 4];
-  offsets.forEach((off, i) => {
+  // CPU cars (種類はランダムで賑やかに / それぞれ別の速さ・レーン・位置でバラけさせる)
+  const cpuTypes  = ['truck', 'bus', 'fire', 'car'];
+  const cpuLanes  = [-3.2, 3.2, -3.2];   // コース中央線からの左右オフセット
+  const cpuSpeedF = [0.90, 1.02, 0.96];  // 個体ごとの速さの違い
+  for (let i = 0; i < 3; i++) {
     const car = createToyCar(null, CPU_COLORS[i], cpuTypes[i % cpuTypes.length]);
-    car.position.set(60, 0.1, 4 + (i+1) * 3.5);
+    // スタート位置をコースに沿ってずらして並べる
+    const startZ = 6 + i * 6;
+    car.position.set(60 + cpuLanes[i] * 0.5, 0.1, startZ);
     scene.add(car);
     cpuCars.push(car);
-    cpuStates.push({ speed: 0, waypointIdx: 0, passedHalf: false, lap: 0, finished: false });
-  });
+    cpuStates.push({
+      speed: 0, waypointIdx: 1, passedHalf: false, lap: 0, finished: false,
+      lane: cpuLanes[i], speedFactor: cpuSpeedF[i],
+    });
+  }
 }
 
 function buildTrack() {
@@ -855,19 +859,23 @@ function updatePlayerCar() {
   if (keys.left)  playerCar.rotation.y += CAR_CONFIG.turnSpeed * Math.max(0.3, playerState.speed / CAR_CONFIG.maxSpeed);
   if (keys.right) playerCar.rotation.y -= CAR_CONFIG.turnSpeed * Math.max(0.3, playerState.speed / CAR_CONFIG.maxSpeed);
 
-  // 操作していないとき：自動でコースに沿うようにハンドル補正（5歳向けアシスト）
-  if (!keys.left && !keys.right) {
-    const pos = playerCar.position;
-    const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
-    // 中央線の進行方向（反時計回り）の向き
-    let desired = Math.atan2(-TRACK_A * Math.sin(theta), TRACK_B * Math.cos(theta));
-    // 中央線からのズレ（外側にいるほど内側へ強めに戻す）
-    const cx = TRACK_A * Math.cos(theta), cz = TRACK_B * Math.sin(theta);
-    const off = Math.hypot(pos.x - cx, pos.z - cz);
-    let d = desired - playerCar.rotation.y;
-    d = Math.atan2(Math.sin(d), Math.cos(d));
-    const assist = Math.min(0.12, 0.05 + off * 0.012); // はみ出しそうなほど強く補正
-    playerCar.rotation.y += d * assist;
+  // ── オートステア：コースの少し先の中央線を狙って自動で曲がる ──
+  const pos = playerCar.position;
+  const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
+  const ahead = theta + 0.22;                              // 進行方向(反時計回り)の少し先
+  const tx = TRACK_A * Math.cos(ahead), tz = TRACK_B * Math.sin(ahead);
+  let desired = Math.atan2(tx - pos.x, tz - pos.z);        // その点へ向かう向き
+  let d = desired - playerCar.rotation.y;
+  d = Math.atan2(Math.sin(d), Math.cos(d));                // -π..π に正規化
+  const cx = TRACK_A * Math.cos(theta), cz = TRACK_B * Math.sin(theta);
+  const off = Math.hypot(pos.x - cx, pos.z - cz);          // 中央線からのズレ
+  const steering = keys.left || keys.right;
+  if (!steering) {
+    // 操作していない → しっかりコースに沿わせる
+    playerCar.rotation.y += d * 0.18;
+  } else if (off > TRACK_HALF * 0.55) {
+    // 操作中でも端に寄りすぎたら自動で戻す（はみ出し防止）
+    playerCar.rotation.y += d * 0.12;
   }
 
   const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerCar.quaternion);
@@ -880,11 +888,20 @@ function updatePlayerCar() {
 function updateCPUCar(car, state) {
   if (!gameRunning || state.finished) return;
   const wp = WAYPOINTS[state.waypointIdx];
-  const target = new THREE.Vector3(wp[0], 0, wp[1]);
+  // ウェイポイントを車ごとに左右にずらして別レーンを走らせる
+  const lane = state.lane || 0;
+  const wlen = Math.hypot(wp[0], wp[1]) || 1;
+  const target = new THREE.Vector3(
+    wp[0] + (-wp[1] / wlen) * lane,
+    0,
+    wp[1] + ( wp[0] / wlen) * lane
+  );
   const dist = car.position.distanceTo(target);
   const dir = target.clone().sub(car.position).normalize();
 
-  const rubber = CAR_CONFIG.maxSpeed * 0.85 + (playerState.speed - CAR_CONFIG.maxSpeed*0.4) * 0.25;
+  // 個体ごとに速さを変えて隊列がバラけるようにする（ゴムバンドは弱め）
+  const base = CAR_CONFIG.maxSpeed * (state.speedFactor || 1);
+  const rubber = base + (playerState.speed - CAR_CONFIG.maxSpeed * 0.5) * 0.12;
   state.speed = Math.min(state.speed + 0.006, Math.max(rubber, 0.05));
   if (dist < 8) state.waypointIdx = (state.waypointIdx + 1) % WAYPOINTS.length;
 
@@ -1010,7 +1027,7 @@ function initRenderer() {
   });
 }
 
-function startRace(bodyColor) {
+function startRace(paintTexture) {
   document.getElementById('coloring-screen').style.display = 'none';
   const rs = document.getElementById('race-screen');
   rs.style.display = 'block';
@@ -1022,7 +1039,7 @@ function startRace(bodyColor) {
   }
 
   initRenderer();
-  buildScene(bodyColor);
+  buildScene(paintTexture);
   gameLoop();
   startCountdown();
 }
@@ -1074,32 +1091,24 @@ touchR.addEventListener('touchstart', e => { e.preventDefault(); keys.right = tr
 touchR.addEventListener('touchend',   e => { e.preventDefault(); keys.right = false; }, { passive: false });
 
 // Start button
-// ぬった一番大きい色（ボディの色）を取り出す
-function getBodyColor() {
-  const W = coloringCanvas.width, H = coloringCanvas.height;
-  const data = cCtx.getImageData(0, 0, W, H).data;
-  const counts = {};
-  for (let i = 0; i < data.length; i += 4) {
-    const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
-    if (a < 200) continue;                                   // 透明（背景）
-    if (r < 60 && g < 60 && b < 60) continue;                // 黒い輪郭
-    if (b > 215 && r > 110 && r < 185 && g > 180 && g < 225) continue; // 窓
-    if (r > 230 && g > 180 && g < 230 && b < 80) continue;   // ホイール金
-    if (r > 240 && g > 230 && b > 120 && b < 200) continue;  // ヘッドライト
-    const key = (r >> 3) + ',' + (g >> 3) + ',' + (b >> 3);  // 量子化
-    counts[key] = (counts[key] || 0) + 1;
-  }
-  let best = null, bestN = 0;
-  for (const k in counts) if (counts[k] > bestN) { bestN = counts[k]; best = k; }
-  if (!best) return 0xCCCCCC;
-  const [r, g, b] = best.split(',').map(n => (parseInt(n) << 3) | 4);
-  return (r << 16) | (g << 8) | b;
+// ぬりえ画像を3Dの車のテクスチャにする（塗った通りに反映）
+function makePaintTexture() {
+  const off = document.createElement('canvas');
+  off.width = coloringCanvas.width;
+  off.height = coloringCanvas.height;
+  const o = off.getContext('2d');
+  o.fillStyle = '#ffffff';            // 透明部分は白で埋める
+  o.fillRect(0, 0, off.width, off.height);
+  o.drawImage(coloringCanvas, 0, 0);  // ぬった絵を重ねる
+  const tex = new THREE.CanvasTexture(off);
+  tex.needsUpdate = true;
+  return tex;
 }
 
 document.getElementById('startBtn').addEventListener('click', () => {
   initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
-  startRace(getBodyColor());
+  startRace(makePaintTexture());
 });
 
 // Again button
