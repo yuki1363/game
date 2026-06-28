@@ -50,6 +50,22 @@ body {
   background: #fff;
 }
 #coloringCanvas { display: block; }
+#vehiclePicker {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+}
+.vehicle-btn {
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  font-size: 18px; font-weight: 800;
+  padding: 8px 14px; border-radius: 16px; cursor: pointer;
+  border: 3px solid #FFB088; background: #fff; color: #CC4400;
+  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+  user-select: none; -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.vehicle-btn:hover { transform: scale(1.06); }
+.vehicle-btn.selected {
+  background: #FF6B35; color: #fff; border-color: #CC4400;
+}
 #palette {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
 }
@@ -153,6 +169,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
+  <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
   </div>
@@ -325,65 +342,130 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+// ─── Vehicle types (働く車) ───
+const VEHICLES = [
+  { id: 'car',   label: '🚗 くるま' },
+  { id: 'truck', label: '🚚 トラック' },
+  { id: 'bus',   label: '🚌 バス' },
+  { id: 'fire',  label: '🚒 しょうぼうしゃ' },
+];
+let currentVehicle = 'car';
+
+const BASE = '#CCCCCC'; // ぬり対象の初期色（メイン）
+
+function drawWheel(ctx, x, y, r) {
+  ctx.fillStyle = '#222222';
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#111'; ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke();
+  ctx.fillStyle = '#FFD700';
+  ctx.beginPath(); ctx.arc(x, y, r*0.42, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, r*0.42, 0, Math.PI*2); ctx.stroke();
+}
+function headlight(ctx, x, y) {
+  ctx.fillStyle = '#FFF6A0';
+  ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2); ctx.stroke();
+}
+function fillStroke(ctx, color) {
+  ctx.fillStyle = color; ctx.fill();
+  ctx.strokeStyle = '#333333'; ctx.lineWidth = 5; ctx.stroke();
+}
+
 function drawCarTemplate() {
   const ctx = cCtx;
   ctx.clearRect(0, 0, 500, 300);
+  ({ car: drawCar, truck: drawTruck, bus: drawBus, fire: drawFire }[currentVehicle])(ctx);
+}
 
-  // --- タイヤ（下レイヤー）---
-  const tirePositions = [[105, 210],[105, 130],[370, 210],[370, 130]];
-  tirePositions.forEach(([x,y]) => {
-    ctx.fillStyle = '#222222';
-    ctx.beginPath();
-    ctx.ellipse(x, y, 36, 36, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.fillStyle = '#FFD700';
-    ctx.beginPath();
-    ctx.ellipse(x, y, 15, 15, 0, 0, Math.PI*2);
-    ctx.fill();
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 36, 36, 0, 0, Math.PI*2);
-    ctx.stroke();
-  });
+function drawCar(ctx) {
+  drawWheel(ctx, 150, 235, 38);
+  drawWheel(ctx, 355, 235, 38);
+  // body
+  roundRect(ctx, 70, 165, 360, 80, 34); fillStroke(ctx, BASE);
+  // cabin
+  ctx.beginPath();
+  ctx.moveTo(150, 170); ctx.lineTo(180, 95);
+  ctx.quadraticCurveTo(190, 80, 215, 80);
+  ctx.lineTo(310, 80);
+  ctx.quadraticCurveTo(335, 80, 345, 95);
+  ctx.lineTo(370, 170); ctx.closePath();
+  fillStroke(ctx, BASE);
+  // windows
+  ctx.fillStyle = '#8CC8F0';
+  ctx.beginPath();
+  ctx.moveTo(190,160); ctx.lineTo(210,105);
+  ctx.quadraticCurveTo(214,98,224,98); ctx.lineTo(248,98); ctx.lineTo(248,160); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(262,160); ctx.lineTo(262,98); ctx.lineTo(300,98);
+  ctx.quadraticCurveTo(312,98,316,108); ctx.lineTo(330,160); ctx.closePath(); ctx.fill();
+  headlight(ctx, 420, 185);
+}
 
-  // --- ボディ ---
-  ctx.fillStyle = '#CCCCCC';
-  roundRect(ctx, 85, 140, 310, 120, 28);
-  ctx.fill();
-  ctx.strokeStyle = '#333333'; ctx.lineWidth = 4;
-  roundRect(ctx, 85, 140, 310, 120, 28);
-  ctx.stroke();
-
-  // --- キャビン ---
-  ctx.fillStyle = '#AAAAAA';
-  roundRect(ctx, 140, 80, 190, 90, 20);
-  ctx.fill();
-  ctx.strokeStyle = '#333333'; ctx.lineWidth = 4;
-  roundRect(ctx, 140, 80, 190, 90, 20);
-  ctx.stroke();
-
-  // --- フロントグリル ---
-  ctx.fillStyle = '#888888';
-  roundRect(ctx, 368, 158, 26, 64, 8);
-  ctx.fill();
+function drawTruck(ctx) {
+  drawWheel(ctx, 130, 240, 36);
+  drawWheel(ctx, 360, 240, 36);
+  drawWheel(ctx, 405, 240, 36);
+  // 荷台（うしろの大きな箱）
+  roundRect(ctx, 60, 110, 230, 130, 16); fillStroke(ctx, BASE);
+  // 運転席（前）
+  roundRect(ctx, 300, 150, 140, 90, 18); fillStroke(ctx, BASE);
+  // 運転席の窓
+  ctx.fillStyle = '#8CC8F0';
+  roundRect(ctx, 360, 162, 70, 45, 10); ctx.fill();
   ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
-  roundRect(ctx, 368, 158, 26, 64, 8);
-  ctx.stroke();
+  roundRect(ctx, 360, 162, 70, 45, 10); ctx.stroke();
+  headlight(ctx, 432, 222);
+}
 
-  // --- ヘッドライト ---
-  ctx.fillStyle = '#FFFF99';
-  roundRect(ctx, 370, 160, 20, 22, 5);
-  ctx.fill();
-  roundRect(ctx, 370, 198, 20, 22, 5);
-  ctx.fill();
+function drawBus(ctx) {
+  drawWheel(ctx, 120, 240, 34);
+  drawWheel(ctx, 380, 240, 34);
+  // 長いボディ
+  roundRect(ctx, 45, 95, 410, 150, 30); fillStroke(ctx, BASE);
+  // 窓を横一列に
+  ctx.fillStyle = '#8CC8F0';
+  for (let i = 0; i < 4; i++) {
+    const wx = 75 + i * 80;
+    roundRect(ctx, wx, 120, 60, 55, 8); ctx.fill();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+    roundRect(ctx, wx, 120, 60, 55, 8); ctx.stroke();
+  }
+  // ドア
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+  ctx.strokeRect(395, 150, 50, 90);
+  headlight(ctx, 440, 220);
+}
 
-  // --- フロントガラス（固定色）---
-  ctx.fillStyle = 'rgba(180,220,255,0.7)';
-  roundRect(ctx, 152, 90, 168, 65, 12);
-  ctx.fill();
-  ctx.strokeStyle = 'rgba(100,160,220,0.8)'; ctx.lineWidth = 2;
-  roundRect(ctx, 152, 90, 168, 65, 12);
-  ctx.stroke();
+function drawFire(ctx) {
+  drawWheel(ctx, 130, 240, 36);
+  drawWheel(ctx, 370, 240, 36);
+  // ボディ（消防車：低めで長い）
+  roundRect(ctx, 55, 150, 390, 95, 22); fillStroke(ctx, BASE);
+  // 運転席
+  roundRect(ctx, 330, 110, 115, 60, 16); fillStroke(ctx, BASE);
+  // 運転席の窓
+  ctx.fillStyle = '#8CC8F0';
+  roundRect(ctx, 350, 122, 75, 38, 8); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
+  roundRect(ctx, 350, 122, 75, 38, 8); ctx.stroke();
+  // はしご（固定・グレー）
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 6;
+  ctx.beginPath(); ctx.moveTo(70, 140); ctx.lineTo(300, 110); ctx.stroke();
+  ctx.lineWidth = 2;
+  for (let i = 0; i <= 8; i++) {
+    const t = i/8;
+    const x = 70 + t*230, y = 140 - t*30;
+    ctx.beginPath(); ctx.moveTo(x, y-7); ctx.lineTo(x, y+7); ctx.stroke();
+  }
+  // サイレン（固定・赤）
+  ctx.fillStyle = '#FF2222';
+  roundRect(ctx, 250, 138, 26, 16, 5); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+  roundRect(ctx, 250, 138, 26, 16, 5); ctx.stroke();
+  headlight(ctx, 435, 222);
 }
 
 function floodFill(startX, startY, fillHex) {
@@ -396,8 +478,8 @@ function floodFill(startX, startY, fillHex) {
   if (tr===fr && tg===fg && tb===fb && ta===255) return;
   // don't fill dark outlines
   if (tr < 60 && tg < 60 && tb < 60 && ta > 200) return;
-  // don't fill glass area
-  if (tb > 200 && tr < 220 && tg > 180 && ta < 230) return;
+  // don't fill glass area (light blue windows #8CC8F0)
+  if (tb > 215 && tr > 110 && tr < 185 && tg > 180 && tg < 225) return;
 
   const stack = [startY * W + startX];
   const visited = new Uint8Array(W * H);
@@ -436,6 +518,21 @@ PALETTE.forEach(p => {
 });
 paletteEl.firstChild.classList.add('selected');
 
+// Build vehicle picker (働く車)
+const vehiclePickerEl = document.getElementById('vehiclePicker');
+VEHICLES.forEach((v, i) => {
+  const btn = document.createElement('div');
+  btn.className = 'vehicle-btn' + (i === 0 ? ' selected' : '');
+  btn.textContent = v.label;
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.vehicle-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    currentVehicle = v.id;
+    drawCarTemplate();
+  });
+  vehiclePickerEl.appendChild(btn);
+});
+
 coloringCanvas.addEventListener('click', e => {
   const rect = coloringCanvas.getBoundingClientRect();
   const scaleX = coloringCanvas.width / rect.width;
@@ -473,7 +570,7 @@ const CAR_CONFIG = {
 
 const keys = { left: false, right: false, up: false, down: false };
 
-function createToyCar(textureURL, color) {
+function createToyCar(textureURL, color, type = 'car') {
   const group = new THREE.Group();
   let bodyMat;
   if (textureURL) {
@@ -485,29 +582,67 @@ function createToyCar(textureURL, color) {
   }
   const darkMat  = new THREE.MeshLambertMaterial({ color: 0x222222 });
   const rimMat   = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
+  const grayMat  = new THREE.MeshLambertMaterial({ color: 0x999999 });
   const glassMat = new THREE.MeshLambertMaterial({ color: 0x99CCFF, transparent: true, opacity: 0.7 });
 
-  // Body
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
-  body.position.y = 0.5; group.add(body);
-
-  // Cabin
-  const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), bodyMat);
-  cabin.position.set(0, 1.1, 0.3); group.add(cabin);
-
-  // Windshield
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.08), glassMat);
-  glass.position.set(0, 1.15, 1.3); group.add(glass);
-
-  // Wheels
-  const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 14);
-  const rimGeo   = new THREE.CylinderGeometry(0.18, 0.18, 0.34, 10);
-  [[0.97,0.35, 1.2],[-0.97,0.35, 1.2],[0.97,0.35,-1.2],[-0.97,0.35,-1.2]].forEach(([x,y,z]) => {
+  function addWheel(x, z) {
+    const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 14);
+    const rimGeo   = new THREE.CylinderGeometry(0.18, 0.18, 0.34, 10);
     const w = new THREE.Mesh(wheelGeo, darkMat);
-    w.rotation.z = Math.PI/2; w.position.set(x,y,z); group.add(w);
+    w.rotation.z = Math.PI/2; w.position.set(x, 0.35, z); group.add(w);
     const r = new THREE.Mesh(rimGeo, rimMat);
-    r.rotation.z = Math.PI/2; r.position.set(x,y,z); group.add(r);
-  });
+    r.rotation.z = Math.PI/2; r.position.set(x, 0.35, z); group.add(r);
+  }
+
+  if (type === 'truck') {
+    // cargo box (back) + cab (front)
+    const cargo = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.3, 2.2), bodyMat);
+    cargo.position.set(0, 0.85, -0.7); group.add(cargo);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.0, 1.3), bodyMat);
+    cab.position.set(0, 0.7, 1.4); group.add(cab);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.45, 0.08), glassMat);
+    glass.position.set(0, 0.95, 2.05); group.add(glass);
+    addWheel(0.97, 1.3); addWheel(-0.97, 1.3);
+    addWheel(0.97, -1.0); addWheel(-0.97, -1.0);
+  } else if (type === 'bus') {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.5, 4.2), bodyMat);
+    body.position.set(0, 0.95, 0); group.add(body);
+    // window strip
+    for (let i = 0; i < 3; i++) {
+      const g = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.9), glassMat);
+      g.position.set(0.96, 1.1, -1.2 + i*1.2); group.add(g);
+      const g2 = g.clone(); g2.position.x = -0.96; group.add(g2);
+    }
+    const front = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 0.08), glassMat);
+    front.position.set(0, 1.2, 2.1); group.add(front);
+    addWheel(0.97, 1.4); addWheel(-0.97, 1.4);
+    addWheel(0.97, -1.4); addWheel(-0.97, -1.4);
+  } else if (type === 'fire') {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.0, 3.6), bodyMat);
+    body.position.set(0, 0.7, -0.2); group.add(body);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.7, 1.0), bodyMat);
+    cab.position.set(0, 1.25, 1.2); group.add(cab);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.08), glassMat);
+    glass.position.set(0, 1.3, 1.7); group.add(glass);
+    // ladder
+    const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 3.0), grayMat);
+    ladder.position.set(0, 1.35, -0.6); group.add(ladder);
+    // siren
+    const siren = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.3), new THREE.MeshLambertMaterial({ color: 0xFF2222 }));
+    siren.position.set(0, 1.7, 1.2); group.add(siren);
+    addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
+    addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
+  } else {
+    // car
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
+    body.position.y = 0.5; group.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), bodyMat);
+    cabin.position.set(0, 1.1, 0.3); group.add(cabin);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.08), glassMat);
+    glass.position.set(0, 1.15, 1.3); group.add(glass);
+    addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
+    addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
+  }
 
   group.castShadow = true;
   return group;
@@ -542,15 +677,16 @@ function buildScene(textureURL) {
   addDecorations();
 
   // Player car
-  playerCar = createToyCar(textureURL, null);
+  playerCar = createToyCar(textureURL, null, currentVehicle);
   playerCar.position.set(60, 0.1, 4);
   scene.add(playerCar);
   playerState = { speed: 0, lap: 0, passedHalf: false, finished: false };
 
-  // CPU cars
+  // CPU cars (種類はランダムで賑やかに)
+  const cpuTypes = ['truck', 'bus', 'fire', 'car'];
   const offsets = [0, 2, 4];
   offsets.forEach((off, i) => {
-    const car = createToyCar(null, CPU_COLORS[i]);
+    const car = createToyCar(null, CPU_COLORS[i], cpuTypes[i % cpuTypes.length]);
     car.position.set(60, 0.1, 4 + (i+1) * 3.5);
     scene.add(car);
     cpuCars.push(car);
@@ -696,6 +832,22 @@ function updateCamera() {
   camera.lookAt(playerCar.position.x, playerCar.position.y + 1.2, playerCar.position.z);
 }
 
+// コースの中央線(楕円)から一定距離内に車を押し戻す
+const TRACK_A = 62, TRACK_B = 44, TRACK_HALF = 6;
+function constrainToTrack(pos) {
+  const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
+  const cx = TRACK_A * Math.cos(theta);
+  const cz = TRACK_B * Math.sin(theta);
+  const dx = pos.x - cx, dz = pos.z - cz;
+  const dist = Math.hypot(dx, dz);
+  if (dist > TRACK_HALF) {
+    pos.x = cx + dx / dist * TRACK_HALF;
+    pos.z = cz + dz / dist * TRACK_HALF;
+    return true; // はみ出した
+  }
+  return false;
+}
+
 function updatePlayerCar() {
   if (!gameRunning || playerState.finished) return;
   playerState.speed = Math.min(playerState.speed + CAR_CONFIG.acceleration, CAR_CONFIG.maxSpeed);
@@ -704,11 +856,13 @@ function updatePlayerCar() {
   if (keys.right) playerCar.rotation.y -= CAR_CONFIG.turnSpeed * Math.max(0.3, playerState.speed / CAR_CONFIG.maxSpeed);
   const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerCar.quaternion);
   playerCar.position.addScaledVector(dir, playerState.speed);
+  // コースの外に出ないように押し戻す（出たら少し減速）
+  if (constrainToTrack(playerCar.position)) playerState.speed *= 0.85;
   playerCar.position.y = 0.1;
 }
 
 function updateCPUCar(car, state) {
-  if (state.finished) return;
+  if (!gameRunning || state.finished) return;
   const wp = WAYPOINTS[state.waypointIdx];
   const target = new THREE.Vector3(wp[0], 0, wp[1]);
   const dist = car.position.distanceTo(target);
@@ -723,6 +877,7 @@ function updateCPUCar(car, state) {
   const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
   car.rotation.y += Math.sign(normalizedDiff) * Math.min(0.06, Math.abs(normalizedDiff));
   car.position.addScaledVector(dir, state.speed);
+  constrainToTrack(car.position);
   car.position.y = 0.1;
 }
 
