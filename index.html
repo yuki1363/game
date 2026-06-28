@@ -854,6 +854,22 @@ function updatePlayerCar() {
   playerState.speed *= CAR_CONFIG.friction;
   if (keys.left)  playerCar.rotation.y += CAR_CONFIG.turnSpeed * Math.max(0.3, playerState.speed / CAR_CONFIG.maxSpeed);
   if (keys.right) playerCar.rotation.y -= CAR_CONFIG.turnSpeed * Math.max(0.3, playerState.speed / CAR_CONFIG.maxSpeed);
+
+  // 操作していないとき：自動でコースに沿うようにハンドル補正（5歳向けアシスト）
+  if (!keys.left && !keys.right) {
+    const pos = playerCar.position;
+    const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
+    // 中央線の進行方向（反時計回り）の向き
+    let desired = Math.atan2(-TRACK_A * Math.sin(theta), TRACK_B * Math.cos(theta));
+    // 中央線からのズレ（外側にいるほど内側へ強めに戻す）
+    const cx = TRACK_A * Math.cos(theta), cz = TRACK_B * Math.sin(theta);
+    const off = Math.hypot(pos.x - cx, pos.z - cz);
+    let d = desired - playerCar.rotation.y;
+    d = Math.atan2(Math.sin(d), Math.cos(d));
+    const assist = Math.min(0.12, 0.05 + off * 0.012); // はみ出しそうなほど強く補正
+    playerCar.rotation.y += d * assist;
+  }
+
   const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerCar.quaternion);
   playerCar.position.addScaledVector(dir, playerState.speed);
   // コースの外に出ないように押し戻す（出たら少し減速）
