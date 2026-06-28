@@ -561,15 +561,47 @@ let gameRunning = false;
 let raceStartTime = 0;
 let animFrameId = null;
 
-const WAYPOINTS = [
-  [60, 0], [45, 35], [0, 42], [-45, 35],
-  [-60, 0], [-45,-35], [0,-42], [45,-35],
-];
+// ── 複雑なサーキット（曲線で定義）──
+const TRACK_HALF = 9;        // コース半幅（車はこの内側を走る）
+const TRACK_N = 500;         // サンプル数
+let TRACK_SAMPLES = [];      // {x,z,tx,tz} 中央線の点と進行方向
+let trackCurve = null;
+
+function buildTrackCurve() {
+  // 半径をうねらせて複雑なコースにする（自己交差しない範囲）
+  const pts = [];
+  const M = 16;
+  for (let k = 0; k < M; k++) {
+    const th = k / M * Math.PI * 2;
+    const r = 70 + 22 * Math.sin(3 * th + 0.6) + 8 * Math.sin(5 * th);
+    pts.push(new THREE.Vector3(r * Math.cos(th), 0, r * 0.82 * Math.sin(th)));
+  }
+  trackCurve = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.5);
+  TRACK_SAMPLES = [];
+  for (let i = 0; i < TRACK_N; i++) {
+    const t = i / TRACK_N;
+    const p = trackCurve.getPointAt(t);
+    const tan = trackCurve.getTangentAt(t);
+    TRACK_SAMPLES.push({ x: p.x, z: p.z, tx: tan.x, tz: tan.z });
+  }
+}
+
+function nearestIdx(x, z) {
+  let best = 0, bd = Infinity;
+  for (let i = 0; i < TRACK_SAMPLES.length; i++) {
+    const s = TRACK_SAMPLES[i];
+    const dx = x - s.x, dz = z - s.z;
+    const d = dx*dx + dz*dz;
+    if (d < bd) { bd = d; best = i; }
+  }
+  return best;
+}
+
 const TOTAL_LAPS = 3;
 const CPU_COLORS = [0xFF4444, 0x4488FF, 0xFF8800, 0xAA44FF];
 
 const CAR_CONFIG = {
-  maxSpeed: 0.30,
+  maxSpeed: 0.28,
   acceleration: 0.009,
   friction: 0.97,
   turnSpeed: 0.038,
@@ -655,7 +687,7 @@ function createToyCar(texture, color, type = 'car') {
 
 function buildScene(paintTexture) {
   scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x87CEEB, 80, 200);
+  scene.fog = new THREE.Fog(0x87CEEB, 160, 420);
 
   // Lights
   scene.add(new THREE.AmbientLight(0xffffff, 0.75));
@@ -669,190 +701,176 @@ function buildScene(paintTexture) {
   renderer.setClearColor(0x87CEEB);
 
   // Grass
-  const grassGeo = new THREE.PlaneGeometry(400, 400);
+  const grassGeo = new THREE.PlaneGeometry(700, 700);
   const grassMat = new THREE.MeshLambertMaterial({ color: 0x5CBF47 });
   const grass = new THREE.Mesh(grassGeo, grassMat);
   grass.rotation.x = -Math.PI/2; grass.receiveShadow = true;
   scene.add(grass);
 
-  // Track — ellipse made of road segments
+  // Track — 複雑なサーキット（曲線）
+  buildTrackCurve();
   buildTrack();
 
   // Decorations
   addDecorations();
 
-  // Player car
-  playerCar = createToyCar(paintTexture, null, currentVehicle);
-  playerCar.position.set(60, 0.1, 4);
-  scene.add(playerCar);
-  playerState = { speed: 0, lap: 0, passedHalf: false, finished: false };
+  // コース上の指定位置に車を配置
+  function placeOnTrack(obj, idx, lane) {
+    const s = TRACK_SAMPLES[((idx % TRACK_N) + TRACK_N) % TRACK_N];
+    const nx = -s.tz, nz = s.tx;  // 左方向の単位法線
+    obj.position.set(s.x + nx * lane, 0.1, s.z + nz * lane);
+    obj.rotation.y = Math.atan2(s.tx, s.tz);
+  }
 
-  // CPU cars (種類はランダムで賑やかに / それぞれ別の速さ・レーン・位置でバラけさせる)
+  // Player car（スタートライン）
+  playerCar = createToyCar(paintTexture, null, currentVehicle);
+  placeOnTrack(playerCar, 0, 0);
+  scene.add(playerCar);
+  playerState = { speed: 0, lap: 0, passedHalf: false, finished: false, prevIdx: 0 };
+
+  // CPU cars（別レーン・別の速さ・少し後ろに整列）
   const cpuTypes  = ['truck', 'bus', 'fire', 'car'];
-  const cpuLanes  = [-3.2, 3.2, -3.2];   // コース中央線からの左右オフセット
-  const cpuSpeedF = [0.90, 1.02, 0.96];  // 個体ごとの速さの違い
+  const cpuLanes  = [-3.5, 3.5, -3.5];
+  const cpuSpeedF = [0.90, 1.02, 0.96];
   for (let i = 0; i < 3; i++) {
     const car = createToyCar(null, CPU_COLORS[i], cpuTypes[i % cpuTypes.length]);
-    // スタート位置をコースに沿ってずらして並べる
-    const startZ = 6 + i * 6;
-    car.position.set(60 + cpuLanes[i] * 0.5, 0.1, startZ);
+    placeOnTrack(car, -8 * (i + 1), cpuLanes[i]);  // スタート手前に整列
     scene.add(car);
     cpuCars.push(car);
     cpuStates.push({
-      speed: 0, waypointIdx: 1, passedHalf: false, lap: 0, finished: false,
+      speed: 0, passedHalf: false, lap: 0, finished: false, prevIdx: 0,
       lane: cpuLanes[i], speedFactor: cpuSpeedF[i],
     });
   }
 }
 
 function buildTrack() {
-  // Road surface — approximate ellipse with many quads
-  const roadMat = new THREE.MeshLambertMaterial({ color: 0x454545 }); // 濃いアスファルトでコースをはっきり
+  const roadMat = new THREE.MeshLambertMaterial({ color: 0x454545 });
   const lineMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
   const kerbRed = new THREE.MeshLambertMaterial({ color: 0xE03030 });
-  const N = 80;
-  const a = 62, b = 44, roadW = 16; // 少し広げる
+  const roadW = TRACK_HALF * 2;          // コース幅（広め）
+  const step = 4;                         // 何サンプルごとに1区間を作るか（軽量化）
 
-  for (let i = 0; i < N; i++) {
-    const t0 = (i / N) * Math.PI * 2;
-    const t1 = ((i+1) / N) * Math.PI * 2;
-    const x0 = Math.cos(t0)*a, z0 = Math.sin(t0)*b;
-    const x1 = Math.cos(t1)*a, z1 = Math.sin(t1)*b;
-    const cx = (x0+x1)/2, cz = (z0+z1)/2;
-    const dx = x1-x0, dz = z1-z0;
-    const len = Math.sqrt(dx*dx+dz*dz);
+  for (let i = 0; i < TRACK_N; i += step) {
+    const s0 = TRACK_SAMPLES[i];
+    const s1 = TRACK_SAMPLES[(i + step) % TRACK_N];
+    const cx = (s0.x + s1.x) / 2, cz = (s0.z + s1.z) / 2;
+    const dx = s1.x - s0.x, dz = s1.z - s0.z;
+    const len = Math.hypot(dx, dz) + 0.4;
     const ang = Math.atan2(dx, dz);
-    // この区間の外向き法線（左右方向）
-    const nx = Math.cos(ang), nz = -Math.sin(ang);
+    const nx = -s0.tz, nz = s0.tx;        // 左方向の単位法線
 
-    const seg = new THREE.Mesh(new THREE.PlaneGeometry(roadW, len + 0.3), roadMat);
-    seg.rotation.x = -Math.PI/2;
-    seg.rotation.z = -ang;
-    seg.position.set(cx, 0.01, cz);
-    seg.receiveShadow = true;
+    const seg = new THREE.Mesh(new THREE.PlaneGeometry(roadW, len), roadMat);
+    seg.rotation.x = -Math.PI/2; seg.rotation.z = -ang;
+    seg.position.set(cx, 0.01, cz); seg.receiveShadow = true;
     scene.add(seg);
 
-    // 両端の白い路肩ライン（コースのフチをはっきり）
-    [roadW/2 - 0.5, -(roadW/2 - 0.5)].forEach(side => {
-      const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.7, len + 0.3), lineMat);
-      edge.rotation.x = -Math.PI/2;
-      edge.rotation.z = -ang;
+    // 白い路肩ライン（両端）
+    [roadW/2 - 0.6, -(roadW/2 - 0.6)].forEach(side => {
+      const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.8, len), lineMat);
+      edge.rotation.x = -Math.PI/2; edge.rotation.z = -ang;
       edge.position.set(cx + nx*side, 0.02, cz + nz*side);
       scene.add(edge);
     });
 
-    // 外側の赤白カーブ（レースっぽさ＆境界をさらに明確に）
-    const kerbMat = (i % 2 === 0) ? kerbRed : lineMat;
-    const ko = roadW/2 + 0.7;
-    const kerb = new THREE.Mesh(new THREE.PlaneGeometry(1.2, len + 0.3), kerbMat);
-    kerb.rotation.x = -Math.PI/2;
-    kerb.rotation.z = -ang;
-    kerb.position.set(cx + nx*ko, 0.015, cz + nz*ko);
-    scene.add(kerb);
+    // 外側の赤白カーブ
+    const kerbMat = ((i / step) % 2 === 0) ? kerbRed : lineMat;
+    [roadW/2 + 0.8, -(roadW/2 + 0.8)].forEach(side => {
+      const kerb = new THREE.Mesh(new THREE.PlaneGeometry(1.4, len), kerbMat);
+      kerb.rotation.x = -Math.PI/2; kerb.rotation.z = -ang;
+      kerb.position.set(cx + nx*side, 0.015, cz + nz*side);
+      scene.add(kerb);
+    });
 
-    // Centre dashes
-    if (i % 3 === 0) {
-      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 3.0), lineMat);
-      dash.rotation.x = -Math.PI/2;
-      dash.rotation.z = -ang;
+    // センターの白い点線
+    if ((i / step) % 2 === 0) {
+      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.5, len * 0.5), lineMat);
+      dash.rotation.x = -Math.PI/2; dash.rotation.z = -ang;
       dash.position.set(cx, 0.02, cz);
       scene.add(dash);
     }
   }
 
-  // Start/finish line
-  const sfMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
-  const sf = new THREE.Mesh(new THREE.PlaneGeometry(roadW, 2), sfMat);
-  sf.rotation.x = -Math.PI/2;
-  sf.position.set(60, 0.03, 0);
-  scene.add(sf);
-
-  // Chequered pattern overlay
-  for (let c = 0; c < 7; c++) {
-    const col = (c % 2 === 0) ? 0x111111 : 0xFFFFFF;
-    const sq = new THREE.Mesh(new THREE.PlaneGeometry(2, 1), new THREE.MeshLambertMaterial({ color: col }));
-    sq.rotation.x = -Math.PI/2;
-    sq.position.set(54 + c*2, 0.04, 0);
-    scene.add(sq);
+  // スタート/フィニッシュの市松模様
+  const s = TRACK_SAMPLES[0];
+  const nx = -s.tz, nz = s.tx;
+  const ang = Math.atan2(s.tx, s.tz);
+  for (let r = 0; r < 2; r++) {
+    for (let c = 0; c < 9; c++) {
+      const col = ((r + c) % 2 === 0) ? 0x111111 : 0xFFFFFF;
+      const sq = new THREE.Mesh(new THREE.PlaneGeometry(roadW/9, 1.1),
+        new THREE.MeshLambertMaterial({ color: col }));
+      sq.rotation.x = -Math.PI/2; sq.rotation.z = -ang;
+      const side = (c - 4) * (roadW/9);
+      sq.position.set(s.x + nx*side + s.tx*(r*1.1), 0.03, s.z + nz*side + s.tz*(r*1.1));
+      scene.add(sq);
+    }
   }
 
-  // Fences along track outer edge
+  // フェンス（外周）
   const fenceMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
   const postMat  = new THREE.MeshLambertMaterial({ color: 0xDD4444 });
-  for (let i = 0; i < N; i++) {
-    const t = (i / N) * Math.PI * 2;
-    const xo = Math.cos(t)*(a + roadW/2 + 1.5);
-    const zo = Math.sin(t)*(b + roadW/2 + 1.5);
-    const xi = Math.cos(t)*(a - roadW/2 - 1.5);
-    const zi = Math.sin(t)*(b - roadW/2 - 1.5);
-    if (i % 3 === 0) {
-      [[xo,zo],[xi,zi]].forEach(([x,z]) => {
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.2,1.2,0.2), postMat);
-        post.position.set(x, 0.6, z);
-        scene.add(post);
-        const rail = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.15,3.5), fenceMat);
-        const t2 = ((i+1.5)/N)*Math.PI*2;
-        const rx = Math.cos(t)*(Math.abs(x) > Math.abs(z) ? a + roadW/2+1.5 : x);
-        rail.position.set(x, 0.9, z);
-        rail.rotation.y = -Math.atan2(Math.cos(t)*b, Math.sin(t)*a);
-        scene.add(rail);
-      });
-    }
+  for (let i = 0; i < TRACK_N; i += 12) {
+    const sp = TRACK_SAMPLES[i];
+    const npx = -sp.tz, npz = sp.tx;
+    const off = roadW/2 + 2.5;
+    [off, -off].forEach(o => {
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.25,1.3,0.25), postMat);
+      post.position.set(sp.x + npx*o, 0.65, sp.z + npz*o);
+      scene.add(post);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.18, 5.0), fenceMat);
+      rail.position.set(sp.x + npx*o, 0.95, sp.z + npz*o);
+      rail.rotation.y = Math.atan2(sp.tx, sp.tz);
+      scene.add(rail);
+    });
+  }
+}
+
+// コースの外側に装飾を散らす（コースに被らない位置に）
+function scatterOutside(count, fn) {
+  for (let k = 0; k < count; k++) {
+    const idx = Math.floor(Math.random() * TRACK_N);
+    const sp = TRACK_SAMPLES[idx];
+    const npx = -sp.tz, npz = sp.tx;
+    const side = (Math.random() < 0.5 ? 1 : -1) * (TRACK_HALF + 6 + Math.random() * 14);
+    fn(sp.x + npx*side, sp.z + npz*side);
   }
 }
 
 function addDecorations() {
-  // Mushrooms
-  const mushroomPositions = [
-    [0, 52],[0,-52],[80,0],[-80,0],[55,50],[-55,50],[55,-50],[-55,-50]
-  ];
-  mushroomPositions.forEach(([x,z]) => {
-    const stemGeo = new THREE.CylinderGeometry(0.3,0.4,1.2,8);
-    const stemMat = new THREE.MeshLambertMaterial({ color: 0xEEDDBB });
-    const stem = new THREE.Mesh(stemGeo, stemMat);
-    stem.position.set(x, 0.6, z);
-    scene.add(stem);
-    const capGeo = new THREE.SphereGeometry(1.0, 10, 8, 0, Math.PI*2, 0, Math.PI/2);
-    const capMat = new THREE.MeshLambertMaterial({ color: 0xFF2222 });
-    const cap = new THREE.Mesh(capGeo, capMat);
-    cap.position.set(x, 1.4, z);
-    scene.add(cap);
-    // Spots
+  // きのこ
+  scatterOutside(14, (x, z) => {
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.2,8),
+      new THREE.MeshLambertMaterial({ color: 0xEEDDBB }));
+    stem.position.set(x, 0.6, z); scene.add(stem);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1.0, 10, 8, 0, Math.PI*2, 0, Math.PI/2),
+      new THREE.MeshLambertMaterial({ color: 0xFF2222 }));
+    cap.position.set(x, 1.4, z); scene.add(cap);
     for (let i = 0; i < 4; i++) {
-      const spot = new THREE.Mesh(new THREE.SphereGeometry(0.18,6,6), new THREE.MeshLambertMaterial({ color: 0xFFFFFF }));
+      const spot = new THREE.Mesh(new THREE.SphereGeometry(0.18,6,6),
+        new THREE.MeshLambertMaterial({ color: 0xFFFFFF }));
       const a = (i/4)*Math.PI*2;
       spot.position.set(x + Math.cos(a)*0.55, 1.7, z + Math.sin(a)*0.55);
       scene.add(spot);
     }
   });
 
-  // Palm trees
-  const palmPositions = [[30,55],[-30,55],[30,-55],[-30,-55],[85,20],[-85,20],[85,-20],[-85,-20]];
-  palmPositions.forEach(([x,z]) => {
-    const trunk = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.22, 0.35, 4, 8),
-      new THREE.MeshLambertMaterial({ color: 0x8B6914 })
-    );
-    trunk.position.set(x, 2, z);
-    scene.add(trunk);
-    const leaves = new THREE.Mesh(
-      new THREE.SphereGeometry(1.8, 8, 6),
-      new THREE.MeshLambertMaterial({ color: 0x33AA22 })
-    );
-    leaves.scale.y = 0.6;
-    leaves.position.set(x, 4.5, z);
-    scene.add(leaves);
+  // ヤシの木
+  scatterOutside(16, (x, z) => {
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 4, 8),
+      new THREE.MeshLambertMaterial({ color: 0x8B6914 }));
+    trunk.position.set(x, 2, z); scene.add(trunk);
+    const leaves = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 6),
+      new THREE.MeshLambertMaterial({ color: 0x33AA22 }));
+    leaves.scale.y = 0.6; leaves.position.set(x, 4.5, z); scene.add(leaves);
   });
 
-  // Rocks
-  [[10,58],[-15,-58],[90,10],[-90,-10]].forEach(([x,z]) => {
-    const rock = new THREE.Mesh(
-      new THREE.SphereGeometry(1.2 + Math.random()*0.5, 7, 6),
-      new THREE.MeshLambertMaterial({ color: 0x888877 })
-    );
+  // 岩
+  scatterOutside(8, (x, z) => {
+    const rock = new THREE.Mesh(new THREE.SphereGeometry(1.2 + Math.random()*0.5, 7, 6),
+      new THREE.MeshLambertMaterial({ color: 0x888877 }));
     rock.scale.set(1, 0.65 + Math.random()*0.3, 1.2 + Math.random()*0.3);
-    rock.position.set(x, 0.5, z);
-    scene.add(rock);
+    rock.position.set(x, 0.5, z); scene.add(rock);
   });
 }
 
@@ -865,16 +883,15 @@ function updateCamera() {
 }
 
 // コースの中央線(楕円)から一定距離内に車を押し戻す
-const TRACK_A = 62, TRACK_B = 44, TRACK_HALF = 6;
+const CAR_KEEP = TRACK_HALF - 1.5;   // 車を留める半幅（路肩より内側）
 function constrainToTrack(pos) {
-  const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
-  const cx = TRACK_A * Math.cos(theta);
-  const cz = TRACK_B * Math.sin(theta);
-  const dx = pos.x - cx, dz = pos.z - cz;
+  const i = nearestIdx(pos.x, pos.z);
+  const s = TRACK_SAMPLES[i];
+  const dx = pos.x - s.x, dz = pos.z - s.z;
   const dist = Math.hypot(dx, dz);
-  if (dist > TRACK_HALF) {
-    pos.x = cx + dx / dist * TRACK_HALF;
-    pos.z = cz + dz / dist * TRACK_HALF;
+  if (dist > CAR_KEEP) {
+    pos.x = s.x + dx / dist * CAR_KEEP;
+    pos.z = s.z + dz / dist * CAR_KEEP;
     return true; // はみ出した
   }
   return false;
@@ -884,18 +901,17 @@ function updatePlayerCar() {
   if (!gameRunning || playerState.finished) return;
   playerState.speed = Math.min(playerState.speed + CAR_CONFIG.acceleration, CAR_CONFIG.maxSpeed);
   playerState.speed *= CAR_CONFIG.friction;
-  // ── オートステア（常時ON）：コースの少し先を狙って自動でコースに沿う ──
+  // ── オートステア（常時ON）：コースの少し先のサンプル点を狙って沿う ──
   const pos = playerCar.position;
-  const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
-  const ahead = theta + 0.22;                              // 進行方向(反時計回り)の少し先
-  const tx = TRACK_A * Math.cos(ahead), tz = TRACK_B * Math.sin(ahead);
-  let desired = Math.atan2(tx - pos.x, tz - pos.z);        // その点へ向かう向き
+  const i = nearestIdx(pos.x, pos.z);
+  const look = TRACK_SAMPLES[(i + 14) % TRACK_N];           // 少し先の中央線
+  let desired = Math.atan2(look.x - pos.x, look.z - pos.z);
   let d = desired - playerCar.rotation.y;
-  d = Math.atan2(Math.sin(d), Math.cos(d));                // -π..π に正規化
+  d = Math.atan2(Math.sin(d), Math.cos(d));                 // -π..π
   // 中央線からズレているほど強く補正（はみ出し防止）
-  const cx = TRACK_A * Math.cos(theta), cz = TRACK_B * Math.sin(theta);
-  const off = Math.hypot(pos.x - cx, pos.z - cz);
-  const autoRate = Math.min(0.28, 0.15 + off * 0.03);
+  const cs = TRACK_SAMPLES[i];
+  const off = Math.hypot(pos.x - cs.x, pos.z - cs.z);
+  const autoRate = Math.min(0.30, 0.16 + off * 0.03);
   playerCar.rotation.y += d * autoRate;
 
   // 手動操作はその上に乗せる小さなハンドル補助（道の中で左右に寄れる）
@@ -913,22 +929,19 @@ function updatePlayerCar() {
 function updateCPUCar(car, state) {
   if (!gameRunning || state.finished) return;
 
-  // プレイヤーと同じ楕円ルックアヘッドで滑らかに操舵（くるくる回らない）
+  // コース曲線のルックアヘッドで滑らかに操舵（くるくる回らない）
   const pos = car.position;
-  const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
-  const ahead = theta + 0.22;
-  let tx = TRACK_A * Math.cos(ahead), tz = TRACK_B * Math.sin(ahead);
-  // 進行方向の左右にずらして別レーンを走らせる
-  let dx = tx - pos.x, dz = tz - pos.z;
-  const dlen = Math.hypot(dx, dz) || 1;
+  const i = nearestIdx(pos.x, pos.z);
+  const look = TRACK_SAMPLES[(i + 14) % TRACK_N];
   const lane = state.lane || 0;
-  tx += (-dz / dlen) * lane;
-  tz += ( dx / dlen) * lane;
+  // 先の点をレーン分だけ横にずらす（左方向法線）
+  const tx = look.x + (-look.tz) * lane;
+  const tz = look.z + ( look.tx) * lane;
 
   let desired = Math.atan2(tx - pos.x, tz - pos.z);
   let d = desired - car.rotation.y;
   d = Math.atan2(Math.sin(d), Math.cos(d));   // -π..π
-  car.rotation.y += d * 0.12;                  // 比例制御（振動しない）
+  car.rotation.y += d * 0.14;                  // 比例制御（振動しない）
 
   // 個体ごとに速さを変えて隊列をバラけさせる（ゴムバンドは弱め）
   const base = CAR_CONFIG.maxSpeed * (state.speedFactor || 1);
@@ -943,12 +956,12 @@ function updateCPUCar(car, state) {
 
 function checkLap(car, state, isPlayer) {
   if (state.finished) return;
-  const finish = new THREE.Vector3(WAYPOINTS[0][0], 0, WAYPOINTS[0][1]);
-  const mid    = new THREE.Vector3(WAYPOINTS[4][0], 0, WAYPOINTS[4][1]);
-
-  if (car.position.distanceTo(mid) < 9) state.passedHalf = true;
-
-  if (car.position.distanceTo(finish) < 9 && state.passedHalf) {
+  const i = nearestIdx(car.position.x, car.position.z);
+  // コース中盤を通過したらフラグを立てる
+  if (i > TRACK_N * 0.4 && i < TRACK_N * 0.6) state.passedHalf = true;
+  // スタートライン付近を「後半→前半」に通過したら1周
+  const wrapped = state.prevIdx > TRACK_N * 0.8 && i < TRACK_N * 0.2;
+  if (wrapped && state.passedHalf) {
     state.lap++;
     state.passedHalf = false;
     if (isPlayer) {
@@ -960,13 +973,15 @@ function checkLap(car, state, isPlayer) {
       }
     }
   }
+  state.prevIdx = i;
 }
 
 function getRank() {
-  const laps = [playerState, ...cpuStates].map((s,i) => ({ i, lap: s.lap, finished: s.finished }));
-  const pLap = playerState.lap;
+  // 周回数＋コース上の進み具合で順位を判定
+  const prog = s => s.lap + (s.prevIdx || 0) / TRACK_N;
+  const p = prog(playerState);
   let rank = 1;
-  cpuStates.forEach(s => { if (s.lap > pLap) rank++; });
+  cpuStates.forEach(s => { if (prog(s) > p) rank++; });
   return rank;
 }
 
