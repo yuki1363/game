@@ -351,10 +351,12 @@ function roundRect(ctx, x, y, w, h, r) {
 
 // ─── Vehicle types (働く車) ───
 const VEHICLES = [
-  { id: 'car',   label: '🚗 くるま' },
-  { id: 'truck', label: '🚚 トラック' },
-  { id: 'bus',   label: '🚌 バス' },
-  { id: 'fire',  label: '🚒 しょうぼうしゃ' },
+  { id: 'car',       label: '🚗 くるま' },
+  { id: 'racecar',   label: '🏎️ レースカー' },
+  { id: 'truck',     label: '🚚 トラック' },
+  { id: 'bulldozer', label: '🚜 ブルドーザー' },
+  { id: 'bus',       label: '🚌 バス' },
+  { id: 'fire',      label: '🚒 しょうぼうしゃ' },
 ];
 let currentVehicle = 'car';
 
@@ -384,7 +386,8 @@ function fillStroke(ctx, color) {
 function drawCarTemplate() {
   const ctx = cCtx;
   ctx.clearRect(0, 0, 500, 300);
-  ({ car: drawCar, truck: drawTruck, bus: drawBus, fire: drawFire }[currentVehicle])(ctx);
+  ({ car: drawCar, racecar: drawRacecar, truck: drawTruck,
+     bulldozer: drawBulldozer, bus: drawBus, fire: drawFire }[currentVehicle])(ctx);
 }
 
 function drawCar(ctx) {
@@ -473,6 +476,66 @@ function drawFire(ctx) {
   ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
   roundRect(ctx, 250, 138, 26, 16, 5); ctx.stroke();
   headlight(ctx, 435, 222);
+}
+
+function drawRacecar(ctx) {
+  drawWheel(ctx, 135, 235, 38);
+  drawWheel(ctx, 360, 235, 38);
+  // 低くて長いボディ（body サンプル: 200,215）
+  ctx.beginPath();
+  ctx.moveTo(60, 225);
+  ctx.lineTo(80, 195);
+  ctx.lineTo(420, 195);
+  ctx.lineTo(450, 215);
+  ctx.lineTo(450, 235);
+  ctx.lineTo(60, 235);
+  ctx.closePath();
+  fillStroke(ctx, BASE);
+  // コックピット（roof サンプル: 250,150）
+  ctx.beginPath();
+  ctx.moveTo(190, 195);
+  ctx.lineTo(215, 140);
+  ctx.quadraticCurveTo(225, 128, 250, 128);
+  ctx.lineTo(285, 128);
+  ctx.quadraticCurveTo(300, 130, 305, 150);
+  ctx.lineTo(320, 195);
+  ctx.closePath();
+  fillStroke(ctx, BASE);
+  // ヘルメット風の窓（固定）
+  ctx.fillStyle = '#8CC8F0';
+  roundRect(ctx, 230, 140, 55, 48, 12); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 3; roundRect(ctx, 230, 140, 55, 48, 12); ctx.stroke();
+  // リアウイング（固定・黒）
+  ctx.fillStyle = '#222';
+  roundRect(ctx, 55, 150, 18, 60, 4); ctx.fill();
+  roundRect(ctx, 45, 150, 50, 12, 4); ctx.fill();
+  // フロントウイング
+  roundRect(ctx, 430, 215, 35, 12, 4); ctx.fill();
+  // ゼッケン丸（固定・白）
+  ctx.fillStyle = '#fff';
+  ctx.beginPath(); ctx.arc(160, 215, 14, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
+}
+
+function drawBulldozer(ctx) {
+  drawWheel(ctx, 150, 240, 40);
+  drawWheel(ctx, 320, 240, 44);
+  // 車体（body サンプル: 180,210）
+  roundRect(ctx, 95, 165, 300, 85, 18); fillStroke(ctx, BASE);
+  // 運転席（roof サンプル: 250,130）
+  roundRect(ctx, 175, 90, 150, 90, 16); fillStroke(ctx, BASE);
+  // 窓（固定）
+  ctx.fillStyle = '#8CC8F0';
+  roundRect(ctx, 195, 105, 110, 55, 8); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 3; roundRect(ctx, 195, 105, 110, 55, 8); ctx.stroke();
+  // 排土板（前の大きな板：固定の黄色）
+  ctx.fillStyle = '#FFC107';
+  roundRect(ctx, 400, 150, 40, 110, 8); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 4; roundRect(ctx, 400, 150, 40, 110, 8); ctx.stroke();
+  // アーム（固定・グレー）
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 8;
+  ctx.beginPath(); ctx.moveTo(360, 200); ctx.lineTo(405, 195); ctx.stroke();
+  headlight(ctx, 388, 180);
 }
 
 function floodFill(startX, startY, fillHex) {
@@ -609,33 +672,28 @@ const CAR_CONFIG = {
 
 const keys = { left: false, right: false, up: false, down: false };
 
-function createToyCar(texture, color, type = 'car') {
+// parts = { body, roof } の色（数値）。パーツごとに塗った色を反映する。
+function createToyCar(parts, type = 'car') {
   const group = new THREE.Group();
-  let bodyMat;
-  if (texture) {
-    bodyMat = new THREE.MeshLambertMaterial({ map: texture });
-  } else {
-    bodyMat = new THREE.MeshLambertMaterial({ color });
-  }
+  const bodyMat = new THREE.MeshLambertMaterial({ color: parts.body });
+  const roofMat = new THREE.MeshLambertMaterial({ color: parts.roof });
   const darkMat  = new THREE.MeshLambertMaterial({ color: 0x222222 });
   const rimMat   = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
   const grayMat  = new THREE.MeshLambertMaterial({ color: 0x999999 });
+  const yellowMat= new THREE.MeshLambertMaterial({ color: 0xFFC107 });
   const glassMat = new THREE.MeshLambertMaterial({ color: 0x99CCFF, transparent: true, opacity: 0.7 });
 
-  function addWheel(x, z) {
-    const wheelGeo = new THREE.CylinderGeometry(0.42, 0.42, 0.32, 14);
-    const rimGeo   = new THREE.CylinderGeometry(0.18, 0.18, 0.34, 10);
-    const w = new THREE.Mesh(wheelGeo, darkMat);
-    w.rotation.z = Math.PI/2; w.position.set(x, 0.35, z); group.add(w);
-    const r = new THREE.Mesh(rimGeo, rimMat);
-    r.rotation.z = Math.PI/2; r.position.set(x, 0.35, z); group.add(r);
+  function addWheel(x, z, r = 0.42) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.32, 14), darkMat);
+    w.rotation.z = Math.PI/2; w.position.set(x, r - 0.07, z); group.add(w);
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(r*0.43, r*0.43, 0.34, 10), rimMat);
+    rim.rotation.z = Math.PI/2; rim.position.set(x, r - 0.07, z); group.add(rim);
   }
 
   if (type === 'truck') {
-    // cargo box (back) + cab (front)
     const cargo = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.3, 2.2), bodyMat);
     cargo.position.set(0, 0.85, -0.7); group.add(cargo);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.0, 1.3), bodyMat);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.0, 1.3), roofMat);
     cab.position.set(0, 0.7, 1.4); group.add(cab);
     const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.45, 0.08), glassMat);
     glass.position.set(0, 0.95, 2.05); group.add(glass);
@@ -644,7 +702,8 @@ function createToyCar(texture, color, type = 'car') {
   } else if (type === 'bus') {
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.5, 4.2), bodyMat);
     body.position.set(0, 0.95, 0); group.add(body);
-    // window strip
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.25, 4.2), roofMat);
+    roof.position.set(0, 1.72, 0); group.add(roof);
     for (let i = 0; i < 3; i++) {
       const g = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.9), glassMat);
       g.position.set(0.96, 1.1, -1.2 + i*1.2); group.add(g);
@@ -657,23 +716,59 @@ function createToyCar(texture, color, type = 'car') {
   } else if (type === 'fire') {
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.0, 3.6), bodyMat);
     body.position.set(0, 0.7, -0.2); group.add(body);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.7, 1.0), bodyMat);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.7, 1.0), roofMat);
     cab.position.set(0, 1.25, 1.2); group.add(cab);
     const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.08), glassMat);
     glass.position.set(0, 1.3, 1.7); group.add(glass);
-    // ladder
     const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 3.0), grayMat);
     ladder.position.set(0, 1.35, -0.6); group.add(ladder);
-    // siren
     const siren = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.3), new THREE.MeshLambertMaterial({ color: 0xFF2222 }));
     siren.position.set(0, 1.7, 1.2); group.add(siren);
     addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
     addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
+  } else if (type === 'bulldozer') {
+    // ずんぐりした車体＋運転席＋前のブレード（排土板）
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.0, 3.0), bodyMat);
+    body.position.set(0, 0.85, -0.3); group.add(body);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 1.2), roofMat);
+    cab.position.set(0, 1.7, -0.6); group.add(cab);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.08), glassMat);
+    glass.position.set(0, 1.75, 0.0); group.add(glass);
+    // 排土板（前の大きな板：固定の黄色）
+    const blade = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 0.3), yellowMat);
+    blade.position.set(0, 0.7, 2.0); group.add(blade);
+    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 1.4), grayMat);
+    armL.position.set(0.7, 0.6, 1.3); group.add(armL);
+    const armR = armL.clone(); armR.position.x = -0.7; group.add(armR);
+    // 大きいタイヤ
+    addWheel(0.95, 1.1, 0.55); addWheel(-0.95, 1.1, 0.55);
+    addWheel(0.95, -1.2, 0.65); addWheel(-0.95, -1.2, 0.65);
+  } else if (type === 'racecar') {
+    // 低くて速そうなレースカー
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.4, 4.0), bodyMat);
+    body.position.set(0, 0.45, 0); group.add(body);
+    const nose = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 1.2), bodyMat);
+    nose.position.set(0, 0.4, 2.2); group.add(nose);
+    const cockpit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 1.3), roofMat);
+    cockpit.position.set(0, 0.75, -0.1); group.add(cockpit);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.35, 0.08), glassMat);
+    glass.position.set(0, 0.8, 0.55); group.add(glass);
+    // リアウイング（固定の黒）
+    const wing = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 0.6), darkMat);
+    wing.position.set(0, 0.95, -2.0); group.add(wing);
+    const ws1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.5), darkMat);
+    ws1.position.set(0.7, 0.7, -2.0); group.add(ws1);
+    const ws2 = ws1.clone(); ws2.position.x = -0.7; group.add(ws2);
+    // フロントウイング
+    const fw = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.08, 0.5), darkMat);
+    fw.position.set(0, 0.3, 2.7); group.add(fw);
+    addWheel(0.95, 1.3); addWheel(-0.95, 1.3);
+    addWheel(0.95, -1.3); addWheel(-0.95, -1.3);
   } else {
     // car
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
     body.position.y = 0.5; group.add(body);
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), bodyMat);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), roofMat);
     cabin.position.set(0, 1.1, 0.3); group.add(cabin);
     const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.08), glassMat);
     glass.position.set(0, 1.15, 1.3); group.add(glass);
@@ -685,7 +780,7 @@ function createToyCar(texture, color, type = 'car') {
   return group;
 }
 
-function buildScene(paintTexture) {
+function buildScene(parts) {
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x87CEEB, 160, 420);
 
@@ -723,18 +818,19 @@ function buildScene(paintTexture) {
   }
 
   // Player car（スタートライン）
-  playerCar = createToyCar(paintTexture, null, currentVehicle);
+  playerCar = createToyCar(parts, currentVehicle);
   placeOnTrack(playerCar, 0, 0);
   scene.add(playerCar);
   playerState = { speed: 0, lap: 0, passedHalf: false, finished: false, prevIdx: 0 };
 
-  // CPU cars（別レーン・別の速さ・少し後ろに整列）
-  const cpuTypes  = ['truck', 'bus', 'fire', 'car'];
-  const cpuLanes  = [-3.5, 3.5, -3.5];
-  const cpuSpeedF = [0.90, 1.02, 0.96];
-  for (let i = 0; i < 3; i++) {
-    const car = createToyCar(null, CPU_COLORS[i], cpuTypes[i % cpuTypes.length]);
-    placeOnTrack(car, -8 * (i + 1), cpuLanes[i]);  // スタート手前に整列
+  // CPU cars（5台・別レーン・別の速さ・スタート手前に2列で整列）
+  const cpuTypes  = ['racecar', 'truck', 'bulldozer', 'bus', 'fire'];
+  const cpuLanes  = [-3.8, 3.8, -3.8, 3.8, 0];
+  const cpuSpeedF = [1.04, 0.92, 0.88, 0.98, 1.00];
+  for (let i = 0; i < 5; i++) {
+    const col = CPU_COLORS[i % CPU_COLORS.length];
+    const car = createToyCar({ body: col, roof: 0xEEEEEE }, cpuTypes[i % cpuTypes.length]);
+    placeOnTrack(car, -7 * (Math.floor(i / 2) + 1), cpuLanes[i]);
     scene.add(car);
     cpuCars.push(car);
     cpuStates.push({
@@ -744,52 +840,46 @@ function buildScene(paintTexture) {
   }
 }
 
-function buildTrack() {
-  const roadMat = new THREE.MeshLambertMaterial({ color: 0x454545 });
-  const lineMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
-  const kerbRed = new THREE.MeshLambertMaterial({ color: 0xE03030 });
-  const roadW = TRACK_HALF * 2;          // コース幅（広め）
-  const step = 4;                         // 何サンプルごとに1区間を作るか（軽量化）
-
-  for (let i = 0; i < TRACK_N; i += step) {
-    const s0 = TRACK_SAMPLES[i];
-    const s1 = TRACK_SAMPLES[(i + step) % TRACK_N];
-    const cx = (s0.x + s1.x) / 2, cz = (s0.z + s1.z) / 2;
-    const dx = s1.x - s0.x, dz = s1.z - s0.z;
-    const len = Math.hypot(dx, dz) + 0.4;
-    const ang = Math.atan2(dx, dz);
-    const nx = -s0.tz, nz = s0.tx;        // 左方向の単位法線
-
-    const seg = new THREE.Mesh(new THREE.PlaneGeometry(roadW, len), roadMat);
-    seg.rotation.x = -Math.PI/2; seg.rotation.z = -ang;
-    seg.position.set(cx, 0.01, cz); seg.receiveShadow = true;
-    scene.add(seg);
-
-    // 白い路肩ライン（両端）
-    [roadW/2 - 0.6, -(roadW/2 - 0.6)].forEach(side => {
-      const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.8, len), lineMat);
-      edge.rotation.x = -Math.PI/2; edge.rotation.z = -ang;
-      edge.position.set(cx + nx*side, 0.02, cz + nz*side);
-      scene.add(edge);
-    });
-
-    // 外側の赤白カーブ
-    const kerbMat = ((i / step) % 2 === 0) ? kerbRed : lineMat;
-    [roadW/2 + 0.8, -(roadW/2 + 0.8)].forEach(side => {
-      const kerb = new THREE.Mesh(new THREE.PlaneGeometry(1.4, len), kerbMat);
-      kerb.rotation.x = -Math.PI/2; kerb.rotation.z = -ang;
-      kerb.position.set(cx + nx*side, 0.015, cz + nz*side);
-      scene.add(kerb);
-    });
-
-    // センターの白い点線
-    if ((i / step) % 2 === 0) {
-      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.5, len * 0.5), lineMat);
-      dash.rotation.x = -Math.PI/2; dash.rotation.z = -ang;
-      dash.position.set(cx, 0.02, cz);
-      scene.add(dash);
-    }
+// 中央線に沿って連続した帯（リボン）を作る。z-fightしない綺麗な路面に。
+function makeRibbon(latOffset, halfW, color, y, basic) {
+  const pos = [], idx = [];
+  for (let i = 0; i <= TRACK_N; i++) {
+    const s = TRACK_SAMPLES[i % TRACK_N];
+    const nx = -s.tz, nz = s.tx;            // 左方向の単位法線
+    const cx = s.x + nx * latOffset, cz = s.z + nz * latOffset;
+    pos.push(cx + nx * halfW, 0, cz + nz * halfW);
+    pos.push(cx - nx * halfW, 0, cz - nz * halfW);
   }
+  for (let i = 0; i < TRACK_N; i++) {
+    const a = i*2, b = i*2+1, c = i*2+2, d = i*2+3;
+    idx.push(a, b, c,  b, d, c);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  const mat = basic
+    ? new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
+    : new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
+  mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -1;
+  const mesh = new THREE.Mesh(g, mat);
+  mesh.position.y = y;
+  scene.add(mesh);
+  return mesh;
+}
+
+function buildTrack() {
+  const HALF = TRACK_HALF;
+  // 路面（連続・濃いアスファルト）
+  makeRibbon(0, HALF, 0x3c3c3c, 0.02, false);
+  // 外側の赤い縁石（左右）
+  makeRibbon( HALF + 0.6, 0.7, 0xE03030, 0.03, true);
+  makeRibbon(-(HALF + 0.6), 0.7, 0xE03030, 0.03, true);
+  // 白い路肩ライン（左右）
+  makeRibbon( HALF - 0.6, 0.35, 0xFFFFFF, 0.05, true);
+  makeRibbon(-(HALF - 0.6), 0.35, 0xFFFFFF, 0.05, true);
+  // センターライン（白・細い実線）
+  makeRibbon(0, 0.25, 0xFFFFFF, 0.05, true);
 
   // スタート/フィニッシュの市松模様
   const s = TRACK_SAMPLES[0];
@@ -798,11 +888,11 @@ function buildTrack() {
   for (let r = 0; r < 2; r++) {
     for (let c = 0; c < 9; c++) {
       const col = ((r + c) % 2 === 0) ? 0x111111 : 0xFFFFFF;
-      const sq = new THREE.Mesh(new THREE.PlaneGeometry(roadW/9, 1.1),
-        new THREE.MeshLambertMaterial({ color: col }));
+      const sq = new THREE.Mesh(new THREE.PlaneGeometry(HALF*2/9, 1.2),
+        new THREE.MeshBasicMaterial({ color: col }));
       sq.rotation.x = -Math.PI/2; sq.rotation.z = -ang;
-      const side = (c - 4) * (roadW/9);
-      sq.position.set(s.x + nx*side + s.tx*(r*1.1), 0.03, s.z + nz*side + s.tz*(r*1.1));
+      const side = (c - 4) * (HALF*2/9);
+      sq.position.set(s.x + nx*side + s.tx*(r*1.2), 0.06, s.z + nz*side + s.tz*(r*1.2));
       scene.add(sq);
     }
   }
@@ -813,7 +903,7 @@ function buildTrack() {
   for (let i = 0; i < TRACK_N; i += 12) {
     const sp = TRACK_SAMPLES[i];
     const npx = -sp.tz, npz = sp.tx;
-    const off = roadW/2 + 2.5;
+    const off = HALF + 2.8;
     [off, -off].forEach(o => {
       const post = new THREE.Mesh(new THREE.BoxGeometry(0.25,1.3,0.25), postMat);
       post.position.set(sp.x + npx*o, 0.65, sp.z + npz*o);
@@ -1069,7 +1159,7 @@ function initRenderer() {
   });
 }
 
-function startRace(paintTexture) {
+function startRace(parts) {
   document.getElementById('coloring-screen').style.display = 'none';
   const rs = document.getElementById('race-screen');
   rs.style.display = 'block';
@@ -1081,7 +1171,7 @@ function startRace(paintTexture) {
   }
 
   initRenderer();
-  buildScene(paintTexture);
+  buildScene(parts);
   gameLoop();
   startCountdown();
 }
@@ -1132,25 +1222,36 @@ touchL.addEventListener('touchend',   e => { e.preventDefault(); keys.left  = fa
 touchR.addEventListener('touchstart', e => { e.preventDefault(); keys.right = true; },  { passive: false });
 touchR.addEventListener('touchend',   e => { e.preventDefault(); keys.right = false; }, { passive: false });
 
-// Start button
-// ぬりえ画像を3Dの車のテクスチャにする（塗った通りに反映）
-function makePaintTexture() {
-  const off = document.createElement('canvas');
-  off.width = coloringCanvas.width;
-  off.height = coloringCanvas.height;
-  const o = off.getContext('2d');
-  o.fillStyle = '#ffffff';            // 透明部分は白で埋める
-  o.fillRect(0, 0, off.width, off.height);
-  o.drawImage(coloringCanvas, 0, 0);  // ぬった絵を重ねる
-  const tex = new THREE.CanvasTexture(off);
-  tex.needsUpdate = true;
-  return tex;
+// パーツごとに塗った色を取り出す（ボディ・ルーフを別々に反映）
+const PART_POINTS = {
+  car:       { body: [250, 215], roof: [250, 120] },
+  truck:     { body: [170, 175], roof: [370, 195] },
+  bus:       { body: [250, 215], roof: [250, 110] },
+  fire:      { body: [250, 205], roof: [385, 140] },
+  bulldozer: { body: [180, 210], roof: [250, 130] },
+  racecar:   { body: [200, 215], roof: [250, 150] },
+};
+function sampleColorAt(x, y) {
+  const d = cCtx.getImageData(x, y, 1, 1).data;
+  // 輪郭の黒に当たったら近くを少し探す
+  if (d[0] < 60 && d[1] < 60 && d[2] < 60) {
+    for (const [dx, dy] of [[8,0],[-8,0],[0,8],[0,-8],[14,0],[-14,0]]) {
+      const e = cCtx.getImageData(x+dx, y+dy, 1, 1).data;
+      if (!(e[0] < 60 && e[1] < 60 && e[2] < 60)) return (e[0]<<16)|(e[1]<<8)|e[2];
+    }
+  }
+  return (d[0]<<16)|(d[1]<<8)|d[2];
+}
+function getParts() {
+  const p = PART_POINTS[currentVehicle] || PART_POINTS.car;
+  return { body: sampleColorAt(p.body[0], p.body[1]), roof: sampleColorAt(p.roof[0], p.roof[1]) };
 }
 
+// Start button
 document.getElementById('startBtn').addEventListener('click', () => {
   initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
-  startRace(makePaintTexture());
+  startRace(getParts());
 });
 
 // Again button
