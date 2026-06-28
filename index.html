@@ -856,10 +856,7 @@ function updatePlayerCar() {
   if (!gameRunning || playerState.finished) return;
   playerState.speed = Math.min(playerState.speed + CAR_CONFIG.acceleration, CAR_CONFIG.maxSpeed);
   playerState.speed *= CAR_CONFIG.friction;
-  if (keys.left)  playerCar.rotation.y += CAR_CONFIG.turnSpeed * Math.max(0.3, playerState.speed / CAR_CONFIG.maxSpeed);
-  if (keys.right) playerCar.rotation.y -= CAR_CONFIG.turnSpeed * Math.max(0.3, playerState.speed / CAR_CONFIG.maxSpeed);
-
-  // ── オートステア：コースの少し先の中央線を狙って自動で曲がる ──
+  // ── オートステア（常時ON）：コースの少し先を狙って自動でコースに沿う ──
   const pos = playerCar.position;
   const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
   const ahead = theta + 0.22;                              // 進行方向(反時計回り)の少し先
@@ -867,16 +864,16 @@ function updatePlayerCar() {
   let desired = Math.atan2(tx - pos.x, tz - pos.z);        // その点へ向かう向き
   let d = desired - playerCar.rotation.y;
   d = Math.atan2(Math.sin(d), Math.cos(d));                // -π..π に正規化
+  // 中央線からズレているほど強く補正（はみ出し防止）
   const cx = TRACK_A * Math.cos(theta), cz = TRACK_B * Math.sin(theta);
-  const off = Math.hypot(pos.x - cx, pos.z - cz);          // 中央線からのズレ
-  const steering = keys.left || keys.right;
-  if (!steering) {
-    // 操作していない → しっかりコースに沿わせる
-    playerCar.rotation.y += d * 0.18;
-  } else if (off > TRACK_HALF * 0.55) {
-    // 操作中でも端に寄りすぎたら自動で戻す（はみ出し防止）
-    playerCar.rotation.y += d * 0.12;
-  }
+  const off = Math.hypot(pos.x - cx, pos.z - cz);
+  const autoRate = Math.min(0.28, 0.15 + off * 0.03);
+  playerCar.rotation.y += d * autoRate;
+
+  // 手動操作はその上に乗せる小さなハンドル補助（道の中で左右に寄れる）
+  const manual = CAR_CONFIG.turnSpeed * Math.max(0.4, playerState.speed / CAR_CONFIG.maxSpeed);
+  if (keys.left)  playerCar.rotation.y += manual;
+  if (keys.right) playerCar.rotation.y -= manual;
 
   const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerCar.quaternion);
   playerCar.position.addScaledVector(dir, playerState.speed);
