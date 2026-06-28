@@ -887,28 +887,30 @@ function updatePlayerCar() {
 
 function updateCPUCar(car, state) {
   if (!gameRunning || state.finished) return;
-  const wp = WAYPOINTS[state.waypointIdx];
-  // ウェイポイントを車ごとに左右にずらして別レーンを走らせる
-  const lane = state.lane || 0;
-  const wlen = Math.hypot(wp[0], wp[1]) || 1;
-  const target = new THREE.Vector3(
-    wp[0] + (-wp[1] / wlen) * lane,
-    0,
-    wp[1] + ( wp[0] / wlen) * lane
-  );
-  const dist = car.position.distanceTo(target);
-  const dir = target.clone().sub(car.position).normalize();
 
-  // 個体ごとに速さを変えて隊列がバラけるようにする（ゴムバンドは弱め）
+  // プレイヤーと同じ楕円ルックアヘッドで滑らかに操舵（くるくる回らない）
+  const pos = car.position;
+  const theta = Math.atan2(pos.z / TRACK_B, pos.x / TRACK_A);
+  const ahead = theta + 0.22;
+  let tx = TRACK_A * Math.cos(ahead), tz = TRACK_B * Math.sin(ahead);
+  // 進行方向の左右にずらして別レーンを走らせる
+  let dx = tx - pos.x, dz = tz - pos.z;
+  const dlen = Math.hypot(dx, dz) || 1;
+  const lane = state.lane || 0;
+  tx += (-dz / dlen) * lane;
+  tz += ( dx / dlen) * lane;
+
+  let desired = Math.atan2(tx - pos.x, tz - pos.z);
+  let d = desired - car.rotation.y;
+  d = Math.atan2(Math.sin(d), Math.cos(d));   // -π..π
+  car.rotation.y += d * 0.12;                  // 比例制御（振動しない）
+
+  // 個体ごとに速さを変えて隊列をバラけさせる（ゴムバンドは弱め）
   const base = CAR_CONFIG.maxSpeed * (state.speedFactor || 1);
   const rubber = base + (playerState.speed - CAR_CONFIG.maxSpeed * 0.5) * 0.12;
   state.speed = Math.min(state.speed + 0.006, Math.max(rubber, 0.05));
-  if (dist < 8) state.waypointIdx = (state.waypointIdx + 1) % WAYPOINTS.length;
 
-  const angle = Math.atan2(dir.x, dir.z);
-  const diff = angle - car.rotation.y;
-  const normalizedDiff = Math.atan2(Math.sin(diff), Math.cos(diff));
-  car.rotation.y += Math.sign(normalizedDiff) * Math.min(0.06, Math.abs(normalizedDiff));
+  const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
   car.position.addScaledVector(dir, state.speed);
   constrainToTrack(car.position);
   car.position.y = 0.1;
