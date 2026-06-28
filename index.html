@@ -700,10 +700,11 @@ function buildScene(paintTexture) {
 
 function buildTrack() {
   // Road surface — approximate ellipse with many quads
-  const roadMat = new THREE.MeshLambertMaterial({ color: 0x6B6B6B });
+  const roadMat = new THREE.MeshLambertMaterial({ color: 0x454545 }); // 濃いアスファルトでコースをはっきり
   const lineMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+  const kerbRed = new THREE.MeshLambertMaterial({ color: 0xE03030 });
   const N = 80;
-  const a = 62, b = 44, roadW = 14;
+  const a = 62, b = 44, roadW = 16; // 少し広げる
 
   for (let i = 0; i < N; i++) {
     const t0 = (i / N) * Math.PI * 2;
@@ -714,17 +715,37 @@ function buildTrack() {
     const dx = x1-x0, dz = z1-z0;
     const len = Math.sqrt(dx*dx+dz*dz);
     const ang = Math.atan2(dx, dz);
+    // この区間の外向き法線（左右方向）
+    const nx = Math.cos(ang), nz = -Math.sin(ang);
 
-    const seg = new THREE.Mesh(new THREE.PlaneGeometry(roadW, len + 0.2), roadMat);
+    const seg = new THREE.Mesh(new THREE.PlaneGeometry(roadW, len + 0.3), roadMat);
     seg.rotation.x = -Math.PI/2;
     seg.rotation.z = -ang;
     seg.position.set(cx, 0.01, cz);
     seg.receiveShadow = true;
     scene.add(seg);
 
-    // Centre dashes every 2 segments
+    // 両端の白い路肩ライン（コースのフチをはっきり）
+    [roadW/2 - 0.5, -(roadW/2 - 0.5)].forEach(side => {
+      const edge = new THREE.Mesh(new THREE.PlaneGeometry(0.7, len + 0.3), lineMat);
+      edge.rotation.x = -Math.PI/2;
+      edge.rotation.z = -ang;
+      edge.position.set(cx + nx*side, 0.02, cz + nz*side);
+      scene.add(edge);
+    });
+
+    // 外側の赤白カーブ（レースっぽさ＆境界をさらに明確に）
+    const kerbMat = (i % 2 === 0) ? kerbRed : lineMat;
+    const ko = roadW/2 + 0.7;
+    const kerb = new THREE.Mesh(new THREE.PlaneGeometry(1.2, len + 0.3), kerbMat);
+    kerb.rotation.x = -Math.PI/2;
+    kerb.rotation.z = -ang;
+    kerb.position.set(cx + nx*ko, 0.015, cz + nz*ko);
+    scene.add(kerb);
+
+    // Centre dashes
     if (i % 3 === 0) {
-      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 2.5), lineMat);
+      const dash = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 3.0), lineMat);
       dash.rotation.x = -Math.PI/2;
       dash.rotation.z = -ang;
       dash.position.set(cx, 0.02, cz);
