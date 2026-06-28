@@ -42,9 +42,14 @@ body {
 }
 #coloringCanvas, #coloring-canvas-wrap { max-width: 100%; }
 /* 縦が低い端末向けにコンパクト化 */
-@media (max-height: 720px) {
-  #coloring-screen { gap: 10px; padding: 10px; }
-  #coloring-screen h1 { font-size: clamp(16px, 4.5vw, 24px); }
+@media (max-height: 760px) {
+  #coloring-screen { gap: 8px; padding: 8px; }
+  #coloring-screen h1 { font-size: clamp(15px, 4vw, 22px); }
+  #version { font-size: 11px; }
+  #coloring-canvas-wrap { max-width: 78vmin; }
+  .color-swatch { width: 40px; height: 40px; }
+  .btn-big { min-height: 58px; font-size: 24px; padding: 10px 30px; }
+  .vehicle-btn { font-size: 15px; padding: 6px 10px; }
 }
 #coloring-screen h1 {
   font-size: clamp(20px, 5vw, 32px);
@@ -64,8 +69,11 @@ body {
   font-size: 13px; color: #B08050; opacity: 0.8;
 }
 #vehiclePicker {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  display: flex; flex-wrap: nowrap; gap: 8px;
+  max-width: 100%; overflow-x: auto; padding: 4px 6px 8px;
+  -webkit-overflow-scrolling: touch;
 }
+.vehicle-btn { flex: 0 0 auto; white-space: nowrap; }
 .vehicle-btn {
   font-family: 'M PLUS Rounded 1c', sans-serif;
   font-size: 18px; font-weight: 800;
@@ -166,6 +174,26 @@ body {
 #touchLeft  { left: 0; }
 #touchRight { right: 0; }
 
+/* Speedometer (右下・道路が透けて見える半透明) */
+#speedo {
+  position: absolute; right: 18px; bottom: 18px;
+  width: 110px; height: 110px; border-radius: 50%;
+  background: rgba(0,0,0,0.28);
+  border: 3px solid rgba(255,255,255,0.55);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: #fff; pointer-events: none;
+  font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 800;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
+}
+#speedoNum { font-size: 40px; line-height: 1; }
+#speedoUnit { font-size: 15px; opacity: 0.85; }
+@media (max-width: 600px) {
+  #speedo { width: 84px; height: 84px; right: 12px; bottom: 12px; }
+  #speedoNum { font-size: 30px; }
+  #speedoUnit { font-size: 12px; }
+}
+
 /* Confetti */
 .confetti {
   position: fixed; top: -10px; width: 12px; height: 12px;
@@ -182,7 +210,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v9 ・ くるま9しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️</div>
+  <div id="version">v10 ・ くるま9しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️</div>
   <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
@@ -206,6 +234,10 @@ body {
   </div>
   <div id="touchLeft">◀</div>
   <div id="touchRight">▶</div>
+  <div id="speedo">
+    <div id="speedoNum">0</div>
+    <div id="speedoUnit">km/h</div>
+  </div>
 </div>
 
 <script>
@@ -612,43 +644,60 @@ function drawShinkansen(ctx) {
 }
 
 function drawBike(ctx) {
-  // 大きな前後タイヤ
-  drawWheel(ctx, 120, 235, 55);
-  drawWheel(ctx, 385, 235, 55);
-  // 車体（タンク＋シート：body サンプル 250,175）
+  // 前後の大きなタイヤ
+  drawWheel(ctx, 130, 235, 52);
+  drawWheel(ctx, 380, 235, 52);
+
+  // フロントフォーク（固定・グレー：前輪へ斜めに）
+  ctx.strokeStyle = '#888'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(335, 150); ctx.lineTo(380, 235); ctx.stroke();
+  // 排気管（固定・グレー：後ろへ）
+  ctx.strokeStyle = '#BBBBBB'; ctx.lineWidth = 10;
+  ctx.beginPath(); ctx.moveTo(300, 215); ctx.lineTo(150, 232); ctx.stroke();
+
+  // メインボディ（タンク＋シート土台：body サンプル 235,190）
+  ctx.lineCap = 'butt';
   ctx.beginPath();
-  ctx.moveTo(165, 200);
-  ctx.lineTo(210, 150);
-  ctx.quadraticCurveTo(230, 135, 280, 140);
-  ctx.lineTo(330, 150);
-  ctx.quadraticCurveTo(360, 158, 360, 185);
-  ctx.lineTo(345, 205);
-  ctx.lineTo(180, 210);
+  ctx.moveTo(150, 215);                       // 後輪の上あたり
+  ctx.lineTo(175, 175);                        // シート後ろ
+  ctx.lineTo(255, 168);                        // シート〜タンク
+  ctx.quadraticCurveTo(300, 165, 320, 185);    // タンク前のふくらみ
+  ctx.lineTo(330, 215);                        // 前下へ
   ctx.closePath();
   fillStroke(ctx, BASE);
-  // カウル（前のカバー：roof サンプル 250,130 …は車体上部）
-  ctx.beginPath();
-  ctx.moveTo(330, 150);
-  ctx.quadraticCurveTo(400, 150, 405, 200);
-  ctx.lineTo(360, 200);
-  ctx.quadraticCurveTo(360, 165, 330, 158);
-  ctx.closePath();
-  fillStroke(ctx, BASE);
+
   // シート（固定・黒）
   ctx.fillStyle = '#222';
-  roundRect(ctx, 175, 150, 70, 22, 8); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(150, 175); ctx.lineTo(220, 170);
+  ctx.lineTo(220, 182); ctx.lineTo(155, 188); ctx.closePath();
+  ctx.fill();
+
+  // フロントカウル（前のカバー：roof サンプル 350,185）
+  ctx.beginPath();
+  ctx.moveTo(325, 165);
+  ctx.quadraticCurveTo(380, 168, 378, 215);
+  ctx.lineTo(345, 215);
+  ctx.quadraticCurveTo(340, 180, 322, 178);
+  ctx.closePath();
+  fillStroke(ctx, BASE);
+
+  // 風防（固定・水色）
+  ctx.fillStyle = '#8CC8F0';
+  ctx.beginPath();
+  ctx.moveTo(345, 165); ctx.quadraticCurveTo(370, 150, 372, 172);
+  ctx.lineTo(360, 178); ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
+
   // ハンドル（固定・黒）
   ctx.strokeStyle = '#222'; ctx.lineWidth = 6; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(360, 160); ctx.lineTo(395, 130); ctx.stroke();
-  // フロントフォーク（固定・グレー）
-  ctx.strokeStyle = '#888'; ctx.lineWidth = 7;
-  ctx.beginPath(); ctx.moveTo(370, 175); ctx.lineTo(385, 235); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(330, 168); ctx.lineTo(300, 140); ctx.stroke();
+  ctx.beginPath(); ctx.arc(298, 138, 7, 0, Math.PI*2); ctx.fillStyle = '#222'; ctx.fill();
+
   // ヘッドライト
   ctx.lineCap = 'butt';
-  headlight(ctx, 402, 195);
-  // 排気管（固定・グレー）
-  ctx.strokeStyle = '#AAA'; ctx.lineWidth = 8;
-  ctx.beginPath(); ctx.moveTo(250, 205); ctx.lineTo(150, 225); ctx.stroke();
+  headlight(ctx, 372, 195);
 }
 
 function floodFill(startX, startY, fillHex) {
@@ -734,6 +783,7 @@ let scene, camera, renderer;
 let playerCar, cpuCars = [];
 let playerState, cpuStates = [];
 let gameRunning = false;
+let raceActive = false;   // レース画面に入っている間 true（二重スタート防止）
 let raceStartTime = 0;
 let animFrameId = null;
 
@@ -911,25 +961,31 @@ function createToyCar(parts, type = 'car') {
     addWheel(0.9, 1.0); addWheel(-0.9, 1.0);
     addWheel(0.9, -1.6); addWheel(-0.9, -1.6);
   } else if (type === 'bike') {
-    // 細い車体＋タンク＋カウル＋ライダー（前後タイヤ）
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.6, 2.2), bodyMat);
-    frame.position.set(0, 0.85, 0); group.add(frame);
-    const tank = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 1.0), bodyMat);
-    tank.position.set(0, 1.1, 0.4); group.add(tank);
-    const cowl = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.8, 0.7), roofMat);
-    cowl.position.set(0, 1.0, 1.3); group.add(cowl);
-    const ws = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.5, 0.08), glassMat);
-    ws.position.set(0, 1.45, 1.45); ws.rotation.x = 0.5; group.add(ws);
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.2, 1.0), darkMat);
-    seat.position.set(0, 1.22, -0.4); group.add(seat);
-    // ライダー（roof 色のジャケット＋黒ヘルメット）
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.7), roofMat);
-    torso.position.set(0, 1.7, -0.15); group.add(torso);
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.32, 10, 8), darkMat);
-    helmet.position.set(0, 2.25, 0.1); group.add(helmet);
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.08), darkMat);
-    bar.position.set(0, 1.4, 1.0); group.add(bar);
-    addWheel(0, 1.35, 0.55); addWheel(0, -1.35, 0.55);
+    // すっきりしたスポーツバイク（前後タイヤ）
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.4, 2.0), bodyMat);
+    frame.position.set(0, 0.72, 0); group.add(frame);
+    // タンク（後ろより）
+    const tank = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.9), bodyMat);
+    tank.position.set(0, 1.0, -0.2); group.add(tank);
+    // シート（黒・後部）
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.9), darkMat);
+    seat.position.set(0, 1.05, -1.0); group.add(seat);
+    // フロントカウル（roof 色・前方）
+    const cowl = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.7), roofMat);
+    cowl.position.set(0, 0.9, 1.4); group.add(cowl);
+    // 風防（ガラス）
+    const ws = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.08), glassMat);
+    ws.position.set(0, 1.35, 1.45); ws.rotation.x = 0.55; group.add(ws);
+    // ハンドル（黒）
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.07, 0.07), darkMat);
+    bar.position.set(0, 1.25, 1.05); group.add(bar);
+    // 小さめライダー（roof 色ジャケット＋黒ヘルメット）
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.55), roofMat);
+    torso.position.set(0, 1.45, -0.45); group.add(torso);
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.27, 10, 8), darkMat);
+    helmet.position.set(0, 1.95, -0.2); group.add(helmet);
+    // タイヤ（前後・大きめ）
+    addWheel(0, 1.25, 0.52); addWheel(0, -1.25, 0.52);
   } else {
     // car
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
@@ -1321,6 +1377,9 @@ function gameLoop() {
   updatePlayerCar();
   cpuCars.forEach((car, i) => updateCPUCar(car, cpuStates[i]));
   if (gameRunning) separateCars();
+  // スピードメーター更新（見た目用の km/h）
+  const kmh = Math.round((playerState.speed / CAR_CONFIG.maxSpeed) * 120);
+  document.getElementById('speedoNum').textContent = kmh;
   checkLap(playerCar, playerState, true);
   cpuCars.forEach((car, i) => checkLap(car, cpuStates[i], false));
   document.getElementById('rank').textContent = getRank();
@@ -1347,6 +1406,8 @@ function initRenderer() {
 }
 
 function startRace(parts) {
+  if (raceActive) return;   // 二重スタート防止
+  raceActive = true;
   document.getElementById('coloring-screen').style.display = 'none';
   const rs = document.getElementById('race-screen');
   rs.style.display = 'block';
@@ -1367,6 +1428,7 @@ function backToColoring() {
   stopBGM();
   if (timerInterval) clearInterval(timerInterval);
   gameRunning = false;
+  raceActive = false;
   if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
 
   // Cleanup Three.js
@@ -1389,6 +1451,11 @@ function backToColoring() {
 
 // ─── Input ───
 document.addEventListener('keydown', e => {
+  // レース中は矢印(と WASD)以外のキーを無効化（5歳児がボタンを誤操作してゲームが終わるのを防ぐ）
+  if (raceActive) {
+    const allowed = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'];
+    if (!allowed.includes(e.key)) { e.preventDefault(); return; }
+  }
   if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') keys.left  = true;
   if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
   if (e.key === 'ArrowUp'    || e.key === 'w' || e.key === 'W') keys.up    = true;
@@ -1419,7 +1486,7 @@ const PART_POINTS = {
   racecar:   { body: [200, 215], roof: [250, 150] },
   train:     { body: [250, 205], roof: [250, 92] },
   shinkansen:{ body: [180, 190], roof: [200, 160] },
-  bike:      { body: [250, 175], roof: [250, 130] },
+  bike:      { body: [235, 190], roof: [355, 195] },
 };
 function sampleColorAt(x, y) {
   const d = cCtx.getImageData(x, y, 1, 1).data;
@@ -1438,14 +1505,16 @@ function getParts() {
 }
 
 // Start button
-document.getElementById('startBtn').addEventListener('click', () => {
+document.getElementById('startBtn').addEventListener('click', (e) => {
+  e.currentTarget.blur();   // フォーカスを外してEnter/Spaceでの再実行を防ぐ
   initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
   startRace(getParts());
 });
 
 // Again button
-document.getElementById('againBtn').addEventListener('click', () => {
+document.getElementById('againBtn').addEventListener('click', (e) => {
+  e.currentTarget.blur();
   backToColoring();
 });
 </script>
