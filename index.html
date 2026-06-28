@@ -648,7 +648,7 @@ function createToyCar(textureURL, color, type = 'car') {
   return group;
 }
 
-function buildScene(textureURL) {
+function buildScene(bodyColor) {
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x87CEEB, 80, 200);
 
@@ -677,7 +677,7 @@ function buildScene(textureURL) {
   addDecorations();
 
   // Player car
-  playerCar = createToyCar(textureURL, null, currentVehicle);
+  playerCar = createToyCar(null, bodyColor, currentVehicle);
   playerCar.position.set(60, 0.1, 4);
   scene.add(playerCar);
   playerState = { speed: 0, lap: 0, passedHalf: false, finished: false };
@@ -994,7 +994,7 @@ function initRenderer() {
   });
 }
 
-function startRace(textureURL) {
+function startRace(bodyColor) {
   document.getElementById('coloring-screen').style.display = 'none';
   const rs = document.getElementById('race-screen');
   rs.style.display = 'block';
@@ -1006,7 +1006,7 @@ function startRace(textureURL) {
   }
 
   initRenderer();
-  buildScene(textureURL);
+  buildScene(bodyColor);
   gameLoop();
   startCountdown();
 }
@@ -1058,11 +1058,32 @@ touchR.addEventListener('touchstart', e => { e.preventDefault(); keys.right = tr
 touchR.addEventListener('touchend',   e => { e.preventDefault(); keys.right = false; }, { passive: false });
 
 // Start button
+// ぬった一番大きい色（ボディの色）を取り出す
+function getBodyColor() {
+  const W = coloringCanvas.width, H = coloringCanvas.height;
+  const data = cCtx.getImageData(0, 0, W, H).data;
+  const counts = {};
+  for (let i = 0; i < data.length; i += 4) {
+    const r = data[i], g = data[i+1], b = data[i+2], a = data[i+3];
+    if (a < 200) continue;                                   // 透明（背景）
+    if (r < 60 && g < 60 && b < 60) continue;                // 黒い輪郭
+    if (b > 215 && r > 110 && r < 185 && g > 180 && g < 225) continue; // 窓
+    if (r > 230 && g > 180 && g < 230 && b < 80) continue;   // ホイール金
+    if (r > 240 && g > 230 && b > 120 && b < 200) continue;  // ヘッドライト
+    const key = (r >> 3) + ',' + (g >> 3) + ',' + (b >> 3);  // 量子化
+    counts[key] = (counts[key] || 0) + 1;
+  }
+  let best = null, bestN = 0;
+  for (const k in counts) if (counts[k] > bestN) { bestN = counts[k]; best = k; }
+  if (!best) return 0xCCCCCC;
+  const [r, g, b] = best.split(',').map(n => (parseInt(n) << 3) | 4);
+  return (r << 16) | (g << 8) | b;
+}
+
 document.getElementById('startBtn').addEventListener('click', () => {
   initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
-  const textureURL = coloringCanvas.toDataURL('image/png');
-  startRace(textureURL);
+  startRace(getBodyColor());
 });
 
 // Again button
