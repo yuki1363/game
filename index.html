@@ -209,7 +209,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v14 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
+  <div id="version">v15 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
   <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
@@ -952,10 +952,34 @@ function makeNoiseTexture(base, variation, spots, spotColor) {
   return tex;
 }
 
+// ぬりえ画像を3D車の側面に貼るテクスチャ（透明部分は body 色で埋める）
+function makeBodyTexture(bgHex) {
+  const off = document.createElement('canvas');
+  off.width = coloringCanvas.width; off.height = coloringCanvas.height;
+  const o = off.getContext('2d');
+  o.fillStyle = '#' + (bgHex >>> 0).toString(16).padStart(6, '0').slice(-6);
+  o.fillRect(0, 0, off.width, off.height);
+  o.drawImage(coloringCanvas, 0, 0);
+  const t = new THREE.CanvasTexture(off);
+  t.encoding = THREE.sRGBEncoding;
+  t.needsUpdate = true;
+  return t;
+}
+// ボディBox用：側面(±X)に塗り絵、その他の面はサンプル色。sideTexが無ければ単色。
+function bodyMaterial(parts, sideTex) {
+  const solid = mat(parts.body, { rough: 0.5, metal: 0.0, env: 0.18 });
+  if (!sideTex) return solid;
+  const right = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.5, metalness: 0.0, envMapIntensity: 0.18 });
+  const left = new THREE.MeshStandardMaterial({ map: sideTex.clone(), roughness: 0.5, metalness: 0.0, envMapIntensity: 0.18 });
+  left.map.wrapS = THREE.RepeatWrapping; left.map.repeat.x = -1; left.map.offset.x = 1; left.map.needsUpdate = true;
+  // [+X, -X, +Y, -Y, +Z, -Z] … 左右の側面に絵、上下/前後は単色
+  return [right, left, solid, solid, solid, solid];
+}
+
 // parts = { body, roof } の色（数値）。パーツごとに塗った色を反映する。
-function createToyCar(parts, type = 'car') {
+function createToyCar(parts, type = 'car', sideTex = null) {
   const group = new THREE.Group();
-  const bodyMat = mat(parts.body, { rough: 0.5, metal: 0.0, env: 0.18 });   // 塗った色が鮮やかに出るよう反射控えめ
+  const bodyMat = bodyMaterial(parts, sideTex);   // 側面に塗り絵、他面はサンプル色
   const roofMat = mat(parts.roof, { rough: 0.5, metal: 0.0, env: 0.18 });
   const darkMat  = mat(0x222222, { rough: 0.9 });                  // ゴム/黒パーツ
   const rimMat   = mat(0xFFD700, { rough: 0.3, metal: 0.6 });      // 金属ホイール
@@ -1206,7 +1230,7 @@ function buildScene(parts) {
   }
 
   // Player car（スタートライン）
-  playerCar = createToyCar(parts, currentVehicle);
+  playerCar = createToyCar(parts, currentVehicle, makeBodyTexture(parts.body));
   placeOnTrack(playerCar, 0, 0);
   scene.add(playerCar);
   playerState = { speed: 0, lap: 0, passedHalf: false, finished: false, prevIdx: 0 };
