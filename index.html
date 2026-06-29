@@ -209,7 +209,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v15 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
+  <div id="version">v16 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
   <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
@@ -928,7 +928,6 @@ function makeSkyTexture() {
   g.fillStyle = grd; g.fillRect(0, 0, 16, 256);
   const tex = new THREE.CanvasTexture(c);
   tex.mapping = THREE.EquirectangularReflectionMapping;
-  tex.encoding = THREE.sRGBEncoding;
   return tex;
 }
 
@@ -948,7 +947,6 @@ function makeNoiseTexture(base, variation, spots, spotColor) {
   g.globalAlpha = 1;
   const tex = new THREE.CanvasTexture(c);
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  tex.encoding = THREE.sRGBEncoding;
   return tex;
 }
 
@@ -961,16 +959,20 @@ function makeBodyTexture(bgHex) {
   o.fillRect(0, 0, off.width, off.height);
   o.drawImage(coloringCanvas, 0, 0);
   const t = new THREE.CanvasTexture(off);
-  t.encoding = THREE.sRGBEncoding;
   t.needsUpdate = true;
   return t;
 }
+// 車体色は塗った色をそのまま鮮やかに出すため、陰影なしのフラット塗り
+function carMat(color) {
+  return new THREE.MeshBasicMaterial({ color });
+}
 // ボディBox用：側面(±X)に塗り絵、その他の面はサンプル色。sideTexが無ければ単色。
 function bodyMaterial(parts, sideTex) {
-  const solid = mat(parts.body, { rough: 0.5, metal: 0.0, env: 0.18 });
+  const solid = carMat(parts.body);
   if (!sideTex) return solid;
-  const right = new THREE.MeshStandardMaterial({ map: sideTex, roughness: 0.5, metalness: 0.0, envMapIntensity: 0.18 });
-  const left = new THREE.MeshStandardMaterial({ map: sideTex.clone(), roughness: 0.5, metalness: 0.0, envMapIntensity: 0.18 });
+  const mk = (m) => new THREE.MeshBasicMaterial({ map: m });
+  const right = mk(sideTex);
+  const left = mk(sideTex.clone());
   left.map.wrapS = THREE.RepeatWrapping; left.map.repeat.x = -1; left.map.offset.x = 1; left.map.needsUpdate = true;
   // [+X, -X, +Y, -Y, +Z, -Z] … 左右の側面に絵、上下/前後は単色
   return [right, left, solid, solid, solid, solid];
@@ -980,7 +982,7 @@ function bodyMaterial(parts, sideTex) {
 function createToyCar(parts, type = 'car', sideTex = null) {
   const group = new THREE.Group();
   const bodyMat = bodyMaterial(parts, sideTex);   // 側面に塗り絵、他面はサンプル色
-  const roofMat = mat(parts.roof, { rough: 0.5, metal: 0.0, env: 0.18 });
+  const roofMat = carMat(parts.roof);
   const darkMat  = mat(0x222222, { rough: 0.9 });                  // ゴム/黒パーツ
   const rimMat   = mat(0xFFD700, { rough: 0.3, metal: 0.6 });      // 金属ホイール
   const grayMat  = mat(0x999999, { rough: 0.5, metal: 0.4 });
@@ -1193,8 +1195,8 @@ function buildScene(parts) {
   pmrem.dispose();
 
   // Lights：空と草が回り込むヘミスフィア＋太陽
-  scene.add(new THREE.HemisphereLight(0xBFE3FF, 0x6BC24A, 0.55));
-  const sun = new THREE.DirectionalLight(0xFFF4CC, 1.2);
+  scene.add(new THREE.HemisphereLight(0xFFFFFF, 0xBFD8AC, 0.35));
+  const sun = new THREE.DirectionalLight(0xFFFFFF, 0.7);
   sun.position.set(60, 90, 40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(LOW_GFX ? 1024 : 2048, LOW_GFX ? 1024 : 2048);
@@ -1717,9 +1719,7 @@ function initRenderer() {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW_GFX ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;        // やわらかい影
-  renderer.outputEncoding = THREE.sRGBEncoding;            // 正しい色
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;      // 上質な階調
-  renderer.toneMappingExposure = 0.95;
+  renderer.toneMapping = THREE.NoToneMapping;              // 塗った色をそのまま鮮やかに出す
   document.getElementById('race-screen').prepend(renderer.domElement);
 
   camera = new THREE.PerspectiveCamera(65, W/H, 0.1, 500);
