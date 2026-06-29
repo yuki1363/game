@@ -209,7 +209,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v13 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
+  <div id="version">v14 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
   <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
@@ -1782,12 +1782,12 @@ touchR.addEventListener('touchend',   e => { e.preventDefault(); keys.right = fa
 // パーツごとに塗った色を取り出す（ボディ・ルーフを別々に反映）
 const PART_POINTS = {
   car:       { body: [250, 215], roof: [250, 120] },
-  truck:     { body: [170, 175], roof: [370, 195] },
+  truck:     { body: [170, 175], roof: [320, 222] },
   bus:       { body: [250, 215], roof: [250, 110] },
-  fire:      { body: [250, 205], roof: [385, 140] },
-  bulldozer: { body: [180, 210], roof: [250, 130] },
-  racecar:   { body: [200, 215], roof: [250, 150] },
-  train:     { body: [250, 205], roof: [250, 92] },
+  fire:      { body: [250, 205], roof: [340, 165] },
+  bulldozer: { body: [180, 210], roof: [250, 172] },
+  racecar:   { body: [200, 215], roof: [210, 170] },
+  train:     { body: [150, 210], roof: [250, 92] },
   shinkansen:{ body: [180, 190], roof: [200, 160] },
   bike:      { body: [235, 190], roof: [355, 195] },
   ambulance: { body: [150, 230], roof: [250, 110] },
