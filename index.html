@@ -209,7 +209,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v12 ・ くるま9しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️</div>
+  <div id="version">v13 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
   <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
@@ -398,6 +398,8 @@ const VEHICLES = [
   { id: 'train',     label: '🚃 でんしゃ' },
   { id: 'shinkansen',label: '🚄 しんかんせん' },
   { id: 'bike',      label: '🏍️ バイク' },
+  { id: 'ambulance', label: '🚑 きゅうきゅうしゃ' },
+  { id: 'police',    label: '🚓 パトカー' },
 ];
 let currentVehicle = 'car';
 
@@ -429,7 +431,8 @@ function drawCarTemplate() {
   ctx.clearRect(0, 0, 500, 300);
   ({ car: drawCar, racecar: drawRacecar, truck: drawTruck,
      bulldozer: drawBulldozer, bus: drawBus, fire: drawFire,
-     train: drawTrain, shinkansen: drawShinkansen, bike: drawBike }[currentVehicle])(ctx);
+     train: drawTrain, shinkansen: drawShinkansen, bike: drawBike,
+     ambulance: drawAmbulance, police: drawPolice }[currentVehicle])(ctx);
 }
 
 function drawCar(ctx) {
@@ -697,6 +700,70 @@ function drawBike(ctx) {
   // ヘッドライト
   ctx.lineCap = 'butt';
   headlight(ctx, 372, 195);
+}
+
+function drawAmbulance(ctx) {
+  drawWheel(ctx, 135, 240, 36);
+  drawWheel(ctx, 360, 240, 36);
+  // 大きな箱型ボディ（救急車：body サンプル 180,205）
+  roundRect(ctx, 55, 105, 280, 140, 16); fillStroke(ctx, BASE);
+  // 前の運転席（少し低い）
+  roundRect(ctx, 320, 150, 125, 95, 18); fillStroke(ctx, BASE);
+  // ルーフ帯（roof サンプル 250,110）
+  roundRect(ctx, 55, 95, 280, 28, 12); fillStroke(ctx, BASE);
+  // 運転席の窓（固定）
+  ctx.fillStyle = '#8CC8F0';
+  roundRect(ctx, 360, 162, 70, 46, 10); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 3; roundRect(ctx, 360, 162, 70, 46, 10); ctx.stroke();
+  // 後部の窓（固定）
+  ctx.fillStyle = '#8CC8F0';
+  roundRect(ctx, 80, 135, 60, 45, 8); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 80, 135, 60, 45, 8); ctx.stroke();
+  // 赤十字（固定・赤）
+  ctx.fillStyle = '#E02020';
+  ctx.fillRect(205, 165, 50, 16);
+  ctx.fillRect(222, 148, 16, 50);
+  // 赤いライン（固定）
+  ctx.fillStyle = '#E02020';
+  ctx.fillRect(55, 200, 390, 12);
+  // サイレン（固定・赤）
+  ctx.fillStyle = '#E02020';
+  roundRect(ctx, 170, 80, 40, 18, 5); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 170, 80, 40, 18, 5); ctx.stroke();
+  headlight(ctx, 438, 222);
+}
+
+function drawPolice(ctx) {
+  drawWheel(ctx, 130, 235, 38);
+  drawWheel(ctx, 370, 235, 38);
+  // ボディ（セダン：body サンプル 250,215）
+  roundRect(ctx, 70, 165, 360, 80, 32); fillStroke(ctx, BASE);
+  // キャビン（roof サンプル 250,120）
+  ctx.beginPath();
+  ctx.moveTo(150, 170); ctx.lineTo(180, 110);
+  ctx.quadraticCurveTo(190, 96, 215, 96);
+  ctx.lineTo(310, 96);
+  ctx.quadraticCurveTo(335, 96, 345, 110);
+  ctx.lineTo(370, 170); ctx.closePath();
+  fillStroke(ctx, BASE);
+  // 窓（固定）
+  ctx.fillStyle = '#8CC8F0';
+  ctx.beginPath();
+  ctx.moveTo(190,165); ctx.lineTo(210,118);
+  ctx.quadraticCurveTo(214,110,224,110); ctx.lineTo(248,110); ctx.lineTo(248,165); ctx.closePath(); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(262,165); ctx.lineTo(262,110); ctx.lineTo(300,110);
+  ctx.quadraticCurveTo(312,110,316,120); ctx.lineTo(330,165); ctx.closePath(); ctx.fill();
+  // ルーフのサイレン（固定・赤青）
+  ctx.fillStyle = '#E02020'; roundRect(ctx, 232, 80, 24, 18, 4); ctx.fill();
+  ctx.fillStyle = '#2255EE'; roundRect(ctx, 256, 80, 24, 18, 4); ctx.fill();
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 232, 80, 48, 18, 4); ctx.stroke();
+  // ドアの「POLICE」風の白帯（固定）
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fillRect(120, 205, 200, 22);
+  ctx.fillStyle = '#222'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
+  ctx.fillText('POLICE', 220, 222); ctx.textAlign = 'start';
+  headlight(ctx, 420, 185);
 }
 
 function floodFill(startX, startY, fillHex) {
@@ -1036,6 +1103,44 @@ function createToyCar(parts, type = 'car') {
     helmet.position.set(0, 1.95, -0.2); group.add(helmet);
     // タイヤ（前後・大きめ）
     addWheel(0, 1.25, 0.52); addWheel(0, -1.25, 0.52);
+  } else if (type === 'ambulance') {
+    // 箱型の救急車
+    const box = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.7, 2.6), bodyMat);
+    box.position.set(0, 1.05, -0.6); group.add(box);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 1.4), bodyMat);
+    cab.position.set(0, 0.75, 1.5); group.add(cab);
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.25, 2.6), roofMat);
+    roof.position.set(0, 2.0, -0.6); group.add(roof);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.08), glassMat);
+    glass.position.set(0, 1.0, 2.2); group.add(glass);
+    // 赤十字（左右・固定赤）
+    const crossMat = mat(0xE02020, { rough: 0.5 });
+    [[0.97,0],[-0.97,0]].forEach(([sx]) => {
+      const h = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.8), crossMat);
+      h.position.set(sx, 1.1, -0.6); group.add(h);
+      const v = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.8, 0.25), crossMat);
+      v.position.set(sx, 1.1, -0.6); group.add(v);
+    });
+    // サイレン（固定・赤）
+    const siren = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.4), mat(0xE02020, { emissive: 0x550000 }));
+    siren.position.set(0, 2.25, -0.2); group.add(siren);
+    addWheel(0.97, 1.3); addWheel(-0.97, 1.3);
+    addWheel(0.97, -1.3); addWheel(-0.97, -1.3);
+  } else if (type === 'police') {
+    // セダン＋ルーフのサイレンバー
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
+    body.position.y = 0.5; group.add(body);
+    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), roofMat);
+    cabin.position.set(0, 1.1, 0.3); group.add(cabin);
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.08), glassMat);
+    glass.position.set(0, 1.15, 1.3); group.add(glass);
+    // サイレンバー（赤・青）
+    const redL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.4), mat(0xE02020, { emissive: 0x550000 }));
+    redL.position.set(-0.3, 1.5, 0.3); group.add(redL);
+    const blueL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.4), mat(0x2255EE, { emissive: 0x001155 }));
+    blueL.position.set(0.3, 1.5, 0.3); group.add(blueL);
+    addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
+    addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
   } else {
     // car
     const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
@@ -1106,10 +1211,11 @@ function buildScene(parts) {
   scene.add(playerCar);
   playerState = { speed: 0, lap: 0, passedHalf: false, finished: false, prevIdx: 0 };
 
-  // CPU cars（5台・別レーン・別の速さ・スタート手前に2列で整列）
+  // CPU cars（5台・別レーン・スタート手前に整列）
   const cpuTypes  = ['racecar', 'truck', 'bulldozer', 'bus', 'fire'];
   const cpuLanes  = [-3.8, 3.8, -3.8, 3.8, 0];
-  const cpuSpeedF = [0.88, 0.82, 0.78, 0.85, 0.80];  // プレイヤーより少し遅め
+  // 競り合うように互角〜やや速め。波(phase)で抜きつ抜かれつ。
+  const cpuSpeedF = [1.02, 0.99, 1.04, 1.00, 1.03];
   for (let i = 0; i < 5; i++) {
     const col = CPU_COLORS[i % CPU_COLORS.length];
     const car = createToyCar({ body: col, roof: 0xEEEEEE }, cpuTypes[i % cpuTypes.length]);
@@ -1119,6 +1225,7 @@ function buildScene(parts) {
     cpuStates.push({
       speed: 0, passedHalf: false, lap: 0, finished: false, prevIdx: 0,
       lane: cpuLanes[i], speedFactor: cpuSpeedF[i],
+      phase: i * 1.7, freq: 0.45 + i * 0.07,   // 速度のゆらぎ（個体差）
     });
   }
 }
@@ -1204,14 +1311,21 @@ function buildTrack() {
   }
 }
 
-// コースの外側に装飾を散らす（bandMin〜bandMax の幅に、コースに被らない位置で）
+// コースの“外側だけ”に装飾を散らす（路面に被らないよう必ず検証）
 function scatterOutside(count, fn, bandMin = 6, bandMax = 20) {
-  for (let k = 0; k < count; k++) {
-    const idx = Math.floor(Math.random() * TRACK_N);
-    const sp = TRACK_SAMPLES[idx];
-    const npx = -sp.tz, npz = sp.tx;
-    const side = (Math.random() < 0.5 ? 1 : -1) * (TRACK_HALF + bandMin + Math.random() * (bandMax - bandMin));
-    fn(sp.x + npx*side, sp.z + npz*side);
+  let placed = 0, attempts = 0;
+  while (placed < count && attempts < count * 15) {
+    attempts++;
+    const sp = TRACK_SAMPLES[Math.floor(Math.random() * TRACK_N)];
+    let nx = -sp.tz, nz = sp.tx;
+    // コースの外向き（原点から遠ざかる向き）に固定して内側／路面に出さない
+    if (nx * sp.x + nz * sp.z < 0) { nx = -nx; nz = -nz; }
+    const dist = TRACK_HALF + bandMin + Math.random() * (bandMax - bandMin);
+    const x = sp.x + nx * dist, z = sp.z + nz * dist;
+    // どのコース地点からも十分離れているか確認（カーブの裏で路面に乗らないように）
+    const s2 = TRACK_SAMPLES[nearestIdx(x, z)];
+    if (Math.hypot(x - s2.x, z - s2.z) < TRACK_HALF + 3) continue;
+    fn(x, z); placed++;
   }
 }
 
@@ -1426,10 +1540,22 @@ function updateCPUCar(car, state) {
   d = Math.atan2(Math.sin(d), Math.cos(d));   // -π..π
   car.rotation.y += d * 0.14;                  // 比例制御（振動しない）
 
-  // 個体ごとに速さを変えて隊列をバラけさせる（ゴムバンドは弱め）
-  const base = CAR_CONFIG.maxSpeed * (state.speedFactor || 1);
-  const rubber = base + (playerState.speed - CAR_CONFIG.maxSpeed * 0.5) * 0.06;
-  state.speed = Math.min(state.speed + 0.006, Math.max(rubber, 0.05));
+  // ── 速度：抜きつ抜かれつ → 最後はプレイヤーが1番になる ──
+  const t = (Date.now() - raceStartTime) / 1000;
+  // ゆらぎで競り合い（速くなったり遅くなったり）
+  let factor = (state.speedFactor || 1) + 0.16 * Math.sin(t * (state.freq || 0.5) + (state.phase || 0));
+  let target = CAR_CONFIG.maxSpeed * factor;
+
+  // 進み具合（周回＋コース位置）
+  const pProg = playerState.lap + (playerState.prevIdx || 0) / TRACK_N;
+  const cProg = state.lap + (state.prevIdx || 0) / TRACK_N;
+  // 最終ラップは、プレイヤーより前にいるCPUを失速させて必ず抜かせる
+  if (pProg > TOTAL_LAPS - 1.0 && cProg >= pProg - 0.015) {
+    target = CAR_CONFIG.maxSpeed * 0.5;
+  }
+
+  state.speed += (target - state.speed) * 0.04;          // なめらかに増減
+  state.speed = Math.max(state.speed, 0.05);
 
   const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
   car.position.addScaledVector(dir, state.speed);
@@ -1664,6 +1790,8 @@ const PART_POINTS = {
   train:     { body: [250, 205], roof: [250, 92] },
   shinkansen:{ body: [180, 190], roof: [200, 160] },
   bike:      { body: [235, 190], roof: [355, 195] },
+  ambulance: { body: [150, 230], roof: [250, 110] },
+  police:    { body: [100, 185], roof: [250, 120] },
 };
 function sampleColorAt(x, y) {
   const d = cCtx.getImageData(x, y, 1, 1).data;
