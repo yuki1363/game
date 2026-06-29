@@ -210,7 +210,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v10 ・ くるま9しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️</div>
+  <div id="version">v11 ・ くるま9しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️</div>
   <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
@@ -835,16 +835,65 @@ const CAR_CONFIG = {
 
 const keys = { left: false, right: false, up: false, down: false };
 
+// ── 画質アップ用ヘルパー ──
+// PBRマテリアル（つや・金属感を指定できる）
+function mat(color, opt = {}) {
+  return new THREE.MeshStandardMaterial({
+    color,
+    roughness: opt.rough != null ? opt.rough : 0.6,
+    metalness: opt.metal != null ? opt.metal : 0.0,
+    emissive: opt.emissive != null ? opt.emissive : 0x000000,
+    emissiveIntensity: opt.emissiveIntensity != null ? opt.emissiveIntensity : 1,
+  });
+}
+
+// 縦グラデーションの空テクスチャ（equirect）
+function makeSkyTexture() {
+  const c = document.createElement('canvas');
+  c.width = 16; c.height = 256;
+  const g = c.getContext('2d');
+  const grd = g.createLinearGradient(0, 0, 0, 256);
+  grd.addColorStop(0.0, '#3E78C8');   // 天頂：濃い空色
+  grd.addColorStop(0.5, '#7EB6E8');
+  grd.addColorStop(0.78, '#BFE3FF');  // 地平：淡い水色
+  grd.addColorStop(1.0, '#E8F6FF');
+  g.fillStyle = grd; g.fillRect(0, 0, 16, 256);
+  const tex = new THREE.CanvasTexture(c);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.encoding = THREE.sRGBEncoding;
+  return tex;
+}
+
+// ムラ（ノイズ）テクスチャ。地面や路面ののっぺり感を消す。
+function makeNoiseTexture(base, variation, spots, spotColor) {
+  const N = 128;
+  const c = document.createElement('canvas');
+  c.width = N; c.height = N;
+  const g = c.getContext('2d');
+  g.fillStyle = base; g.fillRect(0, 0, N, N);
+  for (let i = 0; i < variation; i++) {
+    const x = Math.random()*N, y = Math.random()*N, r = 1 + Math.random()*3;
+    g.fillStyle = spotColor;
+    g.globalAlpha = 0.04 + Math.random()*0.08;
+    g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill();
+  }
+  g.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.encoding = THREE.sRGBEncoding;
+  return tex;
+}
+
 // parts = { body, roof } の色（数値）。パーツごとに塗った色を反映する。
 function createToyCar(parts, type = 'car') {
   const group = new THREE.Group();
-  const bodyMat = new THREE.MeshLambertMaterial({ color: parts.body });
-  const roofMat = new THREE.MeshLambertMaterial({ color: parts.roof });
-  const darkMat  = new THREE.MeshLambertMaterial({ color: 0x222222 });
-  const rimMat   = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
-  const grayMat  = new THREE.MeshLambertMaterial({ color: 0x999999 });
-  const yellowMat= new THREE.MeshLambertMaterial({ color: 0xFFC107 });
-  const glassMat = new THREE.MeshLambertMaterial({ color: 0x99CCFF, transparent: true, opacity: 0.7 });
+  const bodyMat = mat(parts.body, { rough: 0.45, metal: 0.12 });
+  const roofMat = mat(parts.roof, { rough: 0.45, metal: 0.12 });
+  const darkMat  = mat(0x222222, { rough: 0.9 });                  // ゴム/黒パーツ
+  const rimMat   = mat(0xFFD700, { rough: 0.3, metal: 0.6 });      // 金属ホイール
+  const grayMat  = mat(0x999999, { rough: 0.5, metal: 0.4 });
+  const yellowMat= mat(0xFFC107, { rough: 0.5, metal: 0.2 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x99CCFF, transparent: true, opacity: 0.6, roughness: 0.1, metalness: 0.0 });
 
   function addWheel(x, z, r = 0.42) {
     const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.32, 14), darkMat);
@@ -885,7 +934,7 @@ function createToyCar(parts, type = 'car') {
     glass.position.set(0, 1.3, 1.7); group.add(glass);
     const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 3.0), grayMat);
     ladder.position.set(0, 1.35, -0.6); group.add(ladder);
-    const siren = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.3), new THREE.MeshLambertMaterial({ color: 0xFF2222 }));
+    const siren = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.3), mat(0xFF2222, { emissive: 0x550000 }));
     siren.position.set(0, 1.7, 1.2); group.add(siren);
     addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
     addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
@@ -998,28 +1047,39 @@ function createToyCar(parts, type = 'car') {
     addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
   }
 
-  group.castShadow = true;
+  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
   return group;
 }
 
 function buildScene(parts) {
   scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0x87CEEB, 160, 420);
+  scene.fog = new THREE.Fog(0xBFE3FF, 180, 460);
 
-  // Lights
-  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
-  const sun = new THREE.DirectionalLight(0xFFF4CC, 1.2);
-  sun.position.set(50, 80, 30);
+  // 空（グラデーション）＋環境反射
+  const skyTex = makeSkyTexture();
+  scene.background = skyTex;
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromEquirectangular(skyTex).texture;
+  pmrem.dispose();
+
+  // Lights：空と草が回り込むヘミスフィア＋太陽
+  scene.add(new THREE.HemisphereLight(0xBFE3FF, 0x6BC24A, 0.85));
+  const sun = new THREE.DirectionalLight(0xFFF4CC, 1.4);
+  sun.position.set(60, 90, 40);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(LOW_GFX ? 1024 : 2048, LOW_GFX ? 1024 : 2048);
+  sun.shadow.bias = -0.0005;
+  const sc = sun.shadow.camera;
+  sc.left = -110; sc.right = 110; sc.top = 110; sc.bottom = -110;
+  sc.near = 1; sc.far = 260; sc.updateProjectionMatrix();
   scene.add(sun);
 
-  // Sky
-  renderer.setClearColor(0x87CEEB);
-
-  // Grass
+  // Grass（緑のムラテクスチャでのっぺり解消）
   const grassGeo = new THREE.PlaneGeometry(700, 700);
-  const grassMat = new THREE.MeshLambertMaterial({ color: 0x5CBF47 });
+  const grassTex = makeNoiseTexture('#5CBF47', 1400, true, '#3E9C32');
+  grassTex.repeat.set(60, 60);
+  const grassMat = mat(0xffffff, { rough: 0.95 });
+  grassMat.map = grassTex;
   const grass = new THREE.Mesh(grassGeo, grassMat);
   grass.rotation.x = -Math.PI/2; grass.receiveShadow = true;
   scene.add(grass);
@@ -1063,14 +1123,16 @@ function buildScene(parts) {
 }
 
 // 中央線に沿って連続した帯（リボン）を作る。z-fightしない綺麗な路面に。
-function makeRibbon(latOffset, halfW, color, y, basic) {
-  const pos = [], idx = [];
+function makeRibbon(latOffset, halfW, color, y, basic, tex) {
+  const pos = [], idx = [], uv = [];
   for (let i = 0; i <= TRACK_N; i++) {
     const s = TRACK_SAMPLES[i % TRACK_N];
     const nx = -s.tz, nz = s.tx;            // 左方向の単位法線
     const cx = s.x + nx * latOffset, cz = s.z + nz * latOffset;
     pos.push(cx + nx * halfW, 0, cz + nz * halfW);
     pos.push(cx - nx * halfW, 0, cz - nz * halfW);
+    const v = i * 0.5;
+    uv.push(0, v, 1, v);
   }
   for (let i = 0; i < TRACK_N; i++) {
     const a = i*2, b = i*2+1, c = i*2+2, d = i*2+3;
@@ -1078,22 +1140,25 @@ function makeRibbon(latOffset, halfW, color, y, basic) {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(idx);
   g.computeVertexNormals();
-  const mat = basic
+  const m = basic
     ? new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
-    : new THREE.MeshLambertMaterial({ color, side: THREE.DoubleSide });
-  mat.polygonOffset = true; mat.polygonOffsetFactor = -1; mat.polygonOffsetUnits = -1;
-  const mesh = new THREE.Mesh(g, mat);
-  mesh.position.y = y;
+    : new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.95, metalness: 0.0, map: tex || null });
+  m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1;
+  const mesh = new THREE.Mesh(g, m);
+  mesh.position.y = y; mesh.receiveShadow = !basic;
   scene.add(mesh);
   return mesh;
 }
 
 function buildTrack() {
   const HALF = TRACK_HALF;
-  // 路面（連続・濃いアスファルト）
-  makeRibbon(0, HALF, 0x3c3c3c, 0.02, false);
+  // 路面（連続・濃いアスファルト＋ザラつき）
+  const asphalt = makeNoiseTexture('#3c3c3c', 1200, true, '#202020');
+  asphalt.repeat.set(2, 1);
+  makeRibbon(0, HALF, 0xffffff, 0.02, false, asphalt);
   // 外側の赤い縁石（左右）
   makeRibbon( HALF + 0.6, 0.7, 0xE03030, 0.03, true);
   makeRibbon(-(HALF + 0.6), 0.7, 0xE03030, 0.03, true);
@@ -1120,8 +1185,8 @@ function buildTrack() {
   }
 
   // フェンス（外周）
-  const fenceMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
-  const postMat  = new THREE.MeshLambertMaterial({ color: 0xDD4444 });
+  const fenceMat = mat(0xFFFFFF, { rough: 0.7 });
+  const postMat  = mat(0xDD4444, { rough: 0.6 });
   for (let i = 0; i < TRACK_N; i += 12) {
     const sp = TRACK_SAMPLES[i];
     const npx = -sp.tz, npz = sp.tx;
@@ -1153,14 +1218,14 @@ function addDecorations() {
   // きのこ
   scatterOutside(14, (x, z) => {
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.2,8),
-      new THREE.MeshLambertMaterial({ color: 0xEEDDBB }));
-    stem.position.set(x, 0.6, z); scene.add(stem);
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(1.0, 10, 8, 0, Math.PI*2, 0, Math.PI/2),
-      new THREE.MeshLambertMaterial({ color: 0xFF2222 }));
-    cap.position.set(x, 1.4, z); scene.add(cap);
+      mat(0xEEDDBB, { rough: 0.8 }));
+    stem.position.set(x, 0.6, z); stem.castShadow = true; scene.add(stem);
+    const cap = new THREE.Mesh(new THREE.SphereGeometry(1.0, 12, 10, 0, Math.PI*2, 0, Math.PI/2),
+      mat(0xFF2222, { rough: 0.5 }));
+    cap.position.set(x, 1.4, z); cap.castShadow = true; scene.add(cap);
     for (let i = 0; i < 4; i++) {
       const spot = new THREE.Mesh(new THREE.SphereGeometry(0.18,6,6),
-        new THREE.MeshLambertMaterial({ color: 0xFFFFFF }));
+        mat(0xFFFFFF, { rough: 0.6 }));
       const a = (i/4)*Math.PI*2;
       spot.position.set(x + Math.cos(a)*0.55, 1.7, z + Math.sin(a)*0.55);
       scene.add(spot);
@@ -1170,19 +1235,19 @@ function addDecorations() {
   // ヤシの木
   scatterOutside(16, (x, z) => {
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 4, 8),
-      new THREE.MeshLambertMaterial({ color: 0x8B6914 }));
-    trunk.position.set(x, 2, z); scene.add(trunk);
+      mat(0x8B6914, { rough: 0.85 }));
+    trunk.position.set(x, 2, z); trunk.castShadow = true; scene.add(trunk);
     const leaves = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 6),
-      new THREE.MeshLambertMaterial({ color: 0x33AA22 }));
-    leaves.scale.y = 0.6; leaves.position.set(x, 4.5, z); scene.add(leaves);
+      mat(0x33AA22, { rough: 0.8 }));
+    leaves.scale.y = 0.6; leaves.position.set(x, 4.5, z); leaves.castShadow = true; scene.add(leaves);
   });
 
   // 岩
   scatterOutside(8, (x, z) => {
     const rock = new THREE.Mesh(new THREE.SphereGeometry(1.2 + Math.random()*0.5, 7, 6),
-      new THREE.MeshLambertMaterial({ color: 0x888877 }));
+      mat(0x888877, { rough: 0.9 }));
     rock.scale.set(1, 0.65 + Math.random()*0.3, 1.2 + Math.random()*0.3);
-    rock.position.set(x, 0.5, z); scene.add(rock);
+    rock.position.set(x, 0.5, z); rock.castShadow = true; scene.add(rock);
   });
 }
 
@@ -1387,12 +1452,18 @@ function gameLoop() {
   renderer.render(scene, camera);
 }
 
+const LOW_GFX = 'ontouchstart' in window;   // スマホ/タブレットは少し軽量化
+
 function initRenderer() {
   const W = window.innerWidth, H = window.innerHeight;
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(W, H);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW_GFX ? 1.5 : 2));
   renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;        // やわらかい影
+  renderer.outputEncoding = THREE.sRGBEncoding;            // 正しい色
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;      // 上質な階調
+  renderer.toneMappingExposure = 1.05;
   document.getElementById('race-screen').prepend(renderer.domElement);
 
   camera = new THREE.PerspectiveCamera(65, W/H, 0.1, 500);
