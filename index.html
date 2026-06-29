@@ -69,15 +69,14 @@ body {
   font-size: 13px; color: #B08050; opacity: 0.8;
 }
 #vehiclePicker {
-  display: flex; flex-wrap: nowrap; gap: 8px;
-  max-width: 100%; overflow-x: auto; padding: 4px 6px 8px;
-  -webkit-overflow-scrolling: touch;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 7px;
+  max-width: 100%; overflow: visible; padding: 2px;
 }
 .vehicle-btn { flex: 0 0 auto; white-space: nowrap; }
 .vehicle-btn {
   font-family: 'M PLUS Rounded 1c', sans-serif;
-  font-size: 18px; font-weight: 800;
-  padding: 8px 14px; border-radius: 16px; cursor: pointer;
+  font-size: 15px; font-weight: 800;
+  padding: 6px 11px; border-radius: 14px; cursor: pointer;
   border: 3px solid #FFB088; background: #fff; color: #CC4400;
   box-shadow: 0 4px 0 rgba(0,0,0,0.15);
   user-select: none; -webkit-tap-highlight-color: transparent;
@@ -210,7 +209,7 @@ body {
 <!-- ─── COLORING SCREEN ─── -->
 <div id="coloring-screen">
   <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v11 ・ くるま9しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️</div>
+  <div id="version">v12 ・ くるま9しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️</div>
   <div id="vehiclePicker"></div>
   <div id="coloring-canvas-wrap">
     <canvas id="coloringCanvas" width="500" height="300"></canvas>
@@ -838,13 +837,15 @@ const keys = { left: false, right: false, up: false, down: false };
 // ── 画質アップ用ヘルパー ──
 // PBRマテリアル（つや・金属感を指定できる）
 function mat(color, opt = {}) {
-  return new THREE.MeshStandardMaterial({
+  const m = new THREE.MeshStandardMaterial({
     color,
     roughness: opt.rough != null ? opt.rough : 0.6,
     metalness: opt.metal != null ? opt.metal : 0.0,
     emissive: opt.emissive != null ? opt.emissive : 0x000000,
     emissiveIntensity: opt.emissiveIntensity != null ? opt.emissiveIntensity : 1,
   });
+  m.envMapIntensity = opt.env != null ? opt.env : 0.3;   // 環境反射ひかえめ（色が飛ばないように）
+  return m;
 }
 
 // 縦グラデーションの空テクスチャ（equirect）
@@ -887,8 +888,8 @@ function makeNoiseTexture(base, variation, spots, spotColor) {
 // parts = { body, roof } の色（数値）。パーツごとに塗った色を反映する。
 function createToyCar(parts, type = 'car') {
   const group = new THREE.Group();
-  const bodyMat = mat(parts.body, { rough: 0.45, metal: 0.12 });
-  const roofMat = mat(parts.roof, { rough: 0.45, metal: 0.12 });
+  const bodyMat = mat(parts.body, { rough: 0.5, metal: 0.0, env: 0.18 });   // 塗った色が鮮やかに出るよう反射控えめ
+  const roofMat = mat(parts.roof, { rough: 0.5, metal: 0.0, env: 0.18 });
   const darkMat  = mat(0x222222, { rough: 0.9 });                  // ゴム/黒パーツ
   const rimMat   = mat(0xFFD700, { rough: 0.3, metal: 0.6 });      // 金属ホイール
   const grayMat  = mat(0x999999, { rough: 0.5, metal: 0.4 });
@@ -1063,8 +1064,8 @@ function buildScene(parts) {
   pmrem.dispose();
 
   // Lights：空と草が回り込むヘミスフィア＋太陽
-  scene.add(new THREE.HemisphereLight(0xBFE3FF, 0x6BC24A, 0.85));
-  const sun = new THREE.DirectionalLight(0xFFF4CC, 1.4);
+  scene.add(new THREE.HemisphereLight(0xBFE3FF, 0x6BC24A, 0.55));
+  const sun = new THREE.DirectionalLight(0xFFF4CC, 1.2);
   sun.position.set(60, 90, 40);
   sun.castShadow = true;
   sun.shadow.mapSize.set(LOW_GFX ? 1024 : 2048, LOW_GFX ? 1024 : 2048);
@@ -1203,20 +1204,125 @@ function buildTrack() {
   }
 }
 
-// コースの外側に装飾を散らす（コースに被らない位置に）
-function scatterOutside(count, fn) {
+// コースの外側に装飾を散らす（bandMin〜bandMax の幅に、コースに被らない位置で）
+function scatterOutside(count, fn, bandMin = 6, bandMax = 20) {
   for (let k = 0; k < count; k++) {
     const idx = Math.floor(Math.random() * TRACK_N);
     const sp = TRACK_SAMPLES[idx];
     const npx = -sp.tz, npz = sp.tx;
-    const side = (Math.random() < 0.5 ? 1 : -1) * (TRACK_HALF + 6 + Math.random() * 14);
+    const side = (Math.random() < 0.5 ? 1 : -1) * (TRACK_HALF + bandMin + Math.random() * (bandMax - bandMin));
     fn(sp.x + npx*side, sp.z + npz*side);
   }
 }
 
+// 原点まわりの遠景リング（山・遠くの木など）に置く
+function ringPlace(count, rMin, rMax, fn) {
+  for (let k = 0; k < count; k++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = rMin + Math.random() * (rMax - rMin);
+    fn(Math.cos(a) * r, Math.sin(a) * r * 0.9, a);
+  }
+}
+
+// ── 部品を作るヘルパー ──
+function makePineTree(x, z) {
+  const g = new THREE.Group();
+  const h = 4 + Math.random() * 3;
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, h*0.4, 7), mat(0x7A4A1E, { rough: 0.9 }));
+  trunk.position.y = h*0.2; trunk.castShadow = true; g.add(trunk);
+  const green = mat(0x2E8B3D + Math.floor(Math.random()*0x002200), { rough: 0.85 });
+  for (let i = 0; i < 3; i++) {
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.6 - i*0.35, 1.8, 8), green);
+    cone.position.y = h*0.4 + i*1.1 + 0.6; cone.castShadow = true; g.add(cone);
+  }
+  g.position.set(x, 0, z); scene.add(g);
+}
+
+function makeRoundTree(x, z) {
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 7), mat(0x8B5A2B, { rough: 0.9 }));
+  trunk.position.set(x, 1.2, z); trunk.castShadow = true; scene.add(trunk);
+  const crownMat = mat(0x4CAF50, { rough: 0.85 });
+  for (let i = 0; i < 3; i++) {
+    const blob = new THREE.Mesh(new THREE.SphereGeometry(1.3 + Math.random()*0.5, 8, 7), crownMat);
+    blob.position.set(x + (Math.random()-0.5)*1.4, 3 + Math.random()*1.2, z + (Math.random()-0.5)*1.4);
+    blob.castShadow = true; scene.add(blob);
+  }
+}
+
+function makeBush(x, z) {
+  const m = mat(0x4FA84F, { rough: 0.9 });
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.7 + Math.random()*0.4, 7, 6), m);
+    b.position.set(x + (Math.random()-0.5)*1.2, 0.5, z + (Math.random()-0.5)*1.2);
+    b.castShadow = true; scene.add(b);
+  }
+}
+
+function makeFlower(x, z) {
+  const colors = [0xFF5C8A, 0xFFD93B, 0xFF8A3D, 0xB45CFF, 0xFFFFFF];
+  const c = colors[Math.floor(Math.random()*colors.length)];
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6, 5), mat(0x3E9C32, { rough: 0.9 }));
+  stem.position.set(x, 0.3, z); scene.add(stem);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 6), mat(c, { rough: 0.6, emissive: c, emissiveIntensity: 0.15 }));
+  head.position.set(x, 0.65, z); scene.add(head);
+}
+
+function makeHouse(x, z, ang) {
+  const g = new THREE.Group();
+  const wallCol = [0xF5E6C8, 0xFFD9B3, 0xD6ECFF, 0xFFE0E0][Math.floor(Math.random()*4)];
+  const base = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 4), mat(wallCol, { rough: 0.8 }));
+  base.position.y = 1.5; base.castShadow = true; g.add(base);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(3.4, 2, 4), mat(0xB5462E, { rough: 0.7 }));
+  roof.position.y = 4; roof.rotation.y = Math.PI/4; roof.castShadow = true; g.add(roof);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.5, 0.1), mat(0x7A4A1E, { rough: 0.8 }));
+  door.position.set(0, 0.75, 2.02); g.add(door);
+  g.position.set(x, 0, z); g.rotation.y = ang; scene.add(g);
+}
+
+function makeMountain(x, z) {
+  const h = 22 + Math.random() * 28;
+  const r = h * (0.8 + Math.random()*0.4);
+  const col = Math.random() < 0.5 ? 0x7C9A6E : 0x8FA98A;
+  const mtn = new THREE.Mesh(new THREE.ConeGeometry(r, h, 9), mat(col, { rough: 1.0, env: 0.1 }));
+  mtn.position.set(x, h/2 - 2, z); scene.add(mtn);
+  // 雪をかぶった頂
+  if (Math.random() < 0.6) {
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(r*0.32, h*0.28, 9), mat(0xF5FAFF, { rough: 0.9, env: 0.1 }));
+    cap.position.set(x, h*0.86 - 2, z); scene.add(cap);
+  }
+}
+
+function makeCloud(x, y, z) {
+  const m = mat(0xFFFFFF, { rough: 1.0, env: 0.0, emissive: 0xFFFFFF, emissiveIntensity: 0.05 });
+  const g = new THREE.Group();
+  const n = 3 + Math.floor(Math.random()*3);
+  for (let i = 0; i < n; i++) {
+    const puff = new THREE.Mesh(new THREE.SphereGeometry(3 + Math.random()*2.5, 8, 7), m);
+    puff.position.set((Math.random()-0.5)*9, (Math.random()-0.5)*1.5, (Math.random()-0.5)*5);
+    g.add(puff);
+  }
+  g.position.set(x, y, z); g.scale.y = 0.7; scene.add(g);
+}
+
 function addDecorations() {
-  // きのこ
-  scatterOutside(14, (x, z) => {
+  // 遠景の山（ぐるりと囲む）
+  ringPlace(16, 150, 230, (x, z) => makeMountain(x, z));
+  // 雲（空に浮かべる）
+  for (let i = 0; i < 14; i++) {
+    const a = Math.random()*Math.PI*2, r = 60 + Math.random()*160;
+    makeCloud(Math.cos(a)*r, 45 + Math.random()*30, Math.sin(a)*r*0.9);
+  }
+  // 遠めの森（松の木をたくさん）
+  scatterOutside(40, (x, z) => makePineTree(x, z), 18, 55);
+  // コースぎわの木・茂み・花
+  scatterOutside(22, (x, z) => makeRoundTree(x, z), 7, 22);
+  scatterOutside(30, (x, z) => makeBush(x, z), 4, 24);
+  scatterOutside(60, (x, z) => makeFlower(x, z), 3, 20);
+  // 家（数軒）
+  scatterOutside(6, (x, z) => makeHouse(x, z, Math.random()*Math.PI*2), 16, 40);
+
+  // きのこ（残す・かわいいアクセント）
+  scatterOutside(12, (x, z) => {
     const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.2,8),
       mat(0xEEDDBB, { rough: 0.8 }));
     stem.position.set(x, 0.6, z); stem.castShadow = true; scene.add(stem);
@@ -1232,8 +1338,8 @@ function addDecorations() {
     }
   });
 
-  // ヤシの木
-  scatterOutside(16, (x, z) => {
+  // ヤシの木（南国アクセント）
+  scatterOutside(10, (x, z) => {
     const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 4, 8),
       mat(0x8B6914, { rough: 0.85 }));
     trunk.position.set(x, 2, z); trunk.castShadow = true; scene.add(trunk);
@@ -1243,7 +1349,7 @@ function addDecorations() {
   });
 
   // 岩
-  scatterOutside(8, (x, z) => {
+  scatterOutside(10, (x, z) => {
     const rock = new THREE.Mesh(new THREE.SphereGeometry(1.2 + Math.random()*0.5, 7, 6),
       mat(0x888877, { rough: 0.9 }));
     rock.scale.set(1, 0.65 + Math.random()*0.3, 1.2 + Math.random()*0.3);
@@ -1463,7 +1569,7 @@ function initRenderer() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;        // やわらかい影
   renderer.outputEncoding = THREE.sRGBEncoding;            // 正しい色
   renderer.toneMapping = THREE.ACESFilmicToneMapping;      // 上質な階調
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 0.95;
   document.getElementById('race-screen').prepend(renderer.domElement);
 
   camera = new THREE.PerspectiveCamera(65, W/H, 0.1, 500);
