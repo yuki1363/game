@@ -515,7 +515,7 @@ function updateTraffic(dt, cx, cy) {
     const lane = ((Math.random() * 3) | 0) - 1, ahead = car.v > 6 || Math.random() < .3;
     const y = cy + (ahead ? -1 : 1) * (26 + Math.random() * 16);
     if (!traffic.some(t => t.lane === lane && Math.abs(t.y - y) < 9))
-      traffic.push({ lane, x: lane * HW_LANE, y, v: 5.5 + Math.random() * 2.5, base: 0, col: COLORS[(Math.random() * COLORS.length) | 0], wait: 0 });
+      traffic.push({ lane, x: lane * HW_LANE, y, v: 3.2 + Math.random() * 2, base: 0, col: COLORS[(Math.random() * COLORS.length) | 0], wait: 0 });
   }
   for (const t of traffic) {
     if (!t.base) t.base = t.v;
@@ -662,7 +662,7 @@ function view() {
 }
 function layoutGuide() {
   const v = view(), len = CAR_L * v.S;
-  $('guide').style.top = Math.max(50, v.cy - len / 2 - 78) + 'px';
+  $('guide').style.top = Math.max(50, v.cy - len / 2 - 150) + 'px';
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1600); }
 
@@ -702,14 +702,14 @@ function update(dt) {
   const town = mode === 'town';
   const fx0 = Math.sin(car.h), fy0 = -Math.cos(car.h);
   const surf = town ? surfaceAt(car.x + fx0 * AX, car.y + fy0 * AX) : 'road';
-  const vmax = town ? (surf === 'grass' ? 4 : surf === 'walk' ? 7 : 9) : 11;
+  const vmax = town ? (surf === 'grass' ? 2.8 : surf === 'walk' ? 4.5 : 6) : 7.5;
 
   // アクセル・ブレーキ
   if (brk > 0.05) {
     if (car.v > 0.05) car.v = Math.max(0, car.v - brk * 13 * dt);
     else if (town) car.v -= brk * 4 * dt; else car.v = 0;
   } else if (acc > 0.05) {
-    car.v += (car.v < 0 ? 14 : acc * 6) * dt;
+    car.v += (car.v < 0 ? 14 : acc * 4.5) * dt;
   } else {
     car.v -= Math.sign(car.v) * Math.min(Math.abs(car.v), 2.5 * dt);
   }
@@ -731,7 +731,7 @@ function update(dt) {
     }
   } else {
     const lim = HW_RAIL - 1.05;
-    if (Math.abs(car.x) > lim) { car.x = Math.sign(car.x) * lim; car.h *= 0.8; car.v *= (1 - 0.6 * dt); if (car.v > 3) spark(); }
+    if (Math.abs(car.x) > lim) { car.x = Math.sign(car.x) * lim; car.h *= 0.8; car.v *= (1 - 0.6 * dt); if (car.v > 2) spark(); }
     const ccx = car.x + Math.sin(car.h) * AX, ccy = car.y - Math.cos(car.h) * AX;
     updateTraffic(dt, ccx, ccy);
     for (const t of traffic) {
@@ -761,11 +761,11 @@ function update(dt) {
 
   // けむり・土ぼこり・タイヤのあと
   const rx = Math.cos(car.h), ry = Math.sin(car.h), sp = Math.abs(car.v);
-  if (sp > 1 && Math.random() < dt * (surf === 'grass' ? 30 : acc > 0.5 && sp < 6 ? 14 : 3)) {
+  if (sp > 1 && Math.random() < dt * (surf === 'grass' ? 30 : acc > 0.5 && sp < 4 ? 14 : 3)) {
     const s = Math.random() < .5 ? -1 : 1;
     parts.push({ x: car.x + rx * 0.7 * s - fx * 0.9, y: car.y + ry * 0.7 * s - fy * 0.9, vx: -fx * 1.2 + (Math.random() - .5), vy: -fy * 1.2 + (Math.random() - .5), life: 0.6, max: 0.6, r: 0.15, col: surf === 'grass' ? '150,120,70' : '235,235,235' });
   }
-  if (town && sp > 6.5 && Math.abs(car.st) > 0.9 && surf !== 'grass') {
+  if (town && sp > 4.2 && Math.abs(car.st) > 0.9 && surf !== 'grass') {
     for (const s of [-1, 1]) skids.push({ x: car.x + rx * 0.8 * s, y: car.y + ry * 0.8 * s, px: ox + Math.cos(oh) * 0.8 * s, py: oy + Math.sin(oh) * 0.8 * s, life: 6 });
     if (skids.length > 400) skids.splice(0, skids.length - 400);
   }
