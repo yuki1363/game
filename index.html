@@ -122,20 +122,18 @@ body.play.tui:not(.padon) #btnHorn { display: block; }
 body.tui #sizer div { display: none; }
 body.tui #sizer button { padding: 10px 14px; font-size: 14px; }
 #sigHud {
-  position: fixed; z-index: 5; left: 10px; top: max(58px, calc(env(safe-area-inset-top) + 50px)); display: none;
-  width: max-content; min-width: 190px; white-space: nowrap; padding: 9px 14px 10px; border-radius: 18px; background: rgba(20,24,30,.82); border: 3px solid #666; pointer-events: none;
+  position: fixed; z-index: 5; right: 10px; top: max(58px, calc(env(safe-area-inset-top) + 50px)); display: none;   /* みぎがわ: 道の信号（ひだり）と かさならない */
+  width: max-content; padding: 10px 14px 11px; border-radius: 18px; background: rgba(20,24,30,.82); border: 3px solid #666; pointer-events: none;
 }
 #sigHud.show { display: block; }
 body:not(.started) #sigHud { display: none !important; }   /* スタートするまでは出さない（案内文と重なるため）*/
-#sigHud .row { display: flex; align-items: center; gap: 10px; }
-#sigHud .lamps { display: flex; gap: 5px; }
-#sigHud .lamps i { width: 24px; height: 24px; border-radius: 50%; background: #3a3f48; }
-#sigHud b { font-size: 24px; letter-spacing: .02em; }
+#sigHud .lamps { display: flex; gap: 10px; }
+#sigHud .lamps i { width: 38px; height: 38px; border-radius: 50%; background: #3a3f48; }
 #sigHud .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.2); margin-top: 8px; overflow: hidden; }
 #sigBar { display: block; height: 100%; background: #fff; }
-#sigHud.red { border-color: #ff3b30; } #sigHud.red b { color: #ff7a70; } #sigHud.red .lamps i:nth-child(1) { background: #ff3b30; box-shadow: 0 0 12px #ff3b30; }
-#sigHud.yellow { border-color: #ffcc00; } #sigHud.yellow b { color: #ffd23f; } #sigHud.yellow .lamps i:nth-child(2) { background: #ffcc00; box-shadow: 0 0 12px #ffcc00; }
-#sigHud.green { border-color: #34c759; } #sigHud.green b { color: #5ee08a; } #sigHud.green .lamps i:nth-child(3) { background: #34c759; box-shadow: 0 0 12px #34c759; }
+#sigHud.red { border-color: #ff3b30; } #sigHud.red .lamps i:nth-child(3) { background: #ff3b30; box-shadow: 0 0 12px #ff3b30; }
+#sigHud.yellow { border-color: #ffcc00; } #sigHud.yellow .lamps i:nth-child(2) { background: #ffcc00; box-shadow: 0 0 12px #ffcc00; }
+#sigHud.green { border-color: #34c759; } #sigHud.green .lamps i:nth-child(1) { background: #34c759; box-shadow: 0 0 12px #34c759; }
 #toast {
   position: fixed; z-index: 6; left: 50%; top: 16%; transform: translate(-50%, 0) scale(.6);
   background: #ffd23f; color: #3a2a00; border-radius: 999px; padding: 10px 22px; font-size: 20px;
@@ -201,7 +199,7 @@ body:not(.started) #sigHud { display: none !important; }   /* スタートする
   <div class="grp r"><button class="tb brk" data-k="brk">ブレーキ</button><button class="tb acc" data-k="acc">アクセル</button></div>
 </div>
 <button id="btnHorn" data-k="horn">📢</button>
-<div id="sigHud"><div class="row"><div class="lamps"><i></i><i></i><i></i></div><b id="sigTxt"></b></div><div class="bar"><span id="sigBar"></span></div></div>
+<div id="sigHud"><div class="lamps"><i></i><i></i><i></i></div><div class="bar"><span id="sigBar"></span></div></div>
 <div id="toast"></div>
 
 <script>
@@ -478,11 +476,11 @@ function sigInfo(i, j, axis) {   // いまの色と、その色が あと何秒�
   return { s: 'red', left: SIG_T - u, tot: SIG_T - SIG_G - SIG_Y };
 }
 function sigState(i, j, axis) { return sigInfo(i, j, axis).s; }
-function drawSignalHead(c, st) {   // 歩道に立つ信号（上から見た形）。うえ=あか・まんなか=き・した=あお
+function drawSignalHead(c, st) {   // 歩道に立つ信号。交差点に近づく車から見て、うえ=あか・まんなか=き・した=あお（中心に近いほう=あか）
   c.save();
   c.fillStyle = 'rgba(0,0,0,.25)'; rr(c, RH + 0.2, -RH - 5.75, 1.0, 3.1, 0.35); c.fill();
   c.fillStyle = '#2b2f36'; rr(c, RH + 0.1, -RH - 5.9, 1.0, 3.1, 0.35); c.fill();
-  const cols = [['red', '#ff3b30', '#5a2a2a'], ['yellow', '#ffcc00', '#5a5226'], ['green', '#34c759', '#1f4a2b']];
+  const cols = [['green', '#34c759', '#1f4a2b'], ['yellow', '#ffcc00', '#5a5226'], ['red', '#ff3b30', '#5a2a2a']];
   for (let n = 0; n < 3; n++) {
     const on = cols[n][0] === st, ly = -RH - 5.9 + 0.62 + n * 0.93;
     if (on) { c.fillStyle = 'rgba(255,255,255,.22)'; circle(c, RH + 0.6, ly, 0.78); c.fill(); }
@@ -869,7 +867,7 @@ let zoneP = null, waitI = { i: 0, j: 0, t: 0, ok: false }, redT = 0, sigLast = '
 function showSig(inf) {   // 画面のすみの大きな信号（まえの交差点が ちかづいたら でる）
   const el = $('sigHud');
   if (!inf) { if (sigLast) { el.className = ''; sigLast = ''; } return; }
-  if (inf.s !== sigLast) { sigLast = inf.s; el.className = 'show ' + inf.s; $('sigTxt').textContent = inf.s === 'red' ? 'とまれ！' : inf.s === 'yellow' ? 'ちゅうい' : 'すすめ！'; }
+  if (inf.s !== sigLast) { sigLast = inf.s; el.className = 'show ' + inf.s; }
   $('sigBar').style.width = (inf.left / inf.tot * 100).toFixed(0) + '%';
 }
 function awardStar(sx, sy, msg) {
