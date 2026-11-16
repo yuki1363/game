@@ -112,7 +112,7 @@ body.started #guide, body.started #sizer { display: none; }
   <div id="pad">🎮 コントローラーの ボタンを 1かい おしてね</div>
   <div id="soundHint" style="font-size:12px;opacity:.75;font-weight:400">🔊 おとが ならないときは、がめんを 1かい タッチしてね（iPhone）</div>
   <div class="modes">
-    <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>すきな みちを じゆうに</small></button>
+    <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>しんごうも あるよ</small></button>
     <button class="mode" data-mode="highway"><span class="ico">🛣️</span><b>こうそくどうろ</b><small>くるまを よけて びゅーん</small></button>
   </div>
   <div class="opts">
@@ -135,6 +135,7 @@ body.started #guide, body.started #sizer { display: none; }
       <tr><td>Y・ZL / スティック↓</td><td>ブレーキ・バック</td></tr>
       <tr><td>X</td><td>クラクション</td></tr>
       <tr><td>L / R</td><td>ミニカーの枠サイズ調整</td></tr>
+      <tr><td>しんごう（まち）</td><td>赤でとまって待ち、青で進むと⭐ボーナス。赤で進んでもバツはありません</td></tr>
       <tr><td>＋ / −</td><td>メニューにもどる</td></tr>
     </table>
     <h3>ちゅうい</h3>
@@ -144,7 +145,7 @@ body.started #guide, body.started #sizer { display: none; }
       <li>コントローラーがない場合はキーボード（矢印キー / スペース）でも動かせます。</li>
     </ul>
   </details>
-  <div id="ver">v1 ・ ミニカードライブ</div>
+  <div id="ver">v2 ・ ミニカードライブ</div>
 </div>
 
 <div id="stars" class="hud">⭐ <span id="starN">0</span></div>
@@ -418,6 +419,24 @@ function drawBlock(c, b) {
     }
   }
 }
+// 信号: 交差点ごとに少しずつずらして、たてとよこが交互に青になる（青8秒・黄2秒・赤のこり）
+const SIG_T = 22;
+function sigState(i, j, axis) {
+  const u = (((time + hash(i, j, 61) * SIG_T + axis * SIG_T / 2) % SIG_T) + SIG_T) % SIG_T;
+  return u < 8 ? 'green' : u < 10 ? 'yellow' : 'red';
+}
+function drawSignalHead(c, st) {   // 歩道に立つ信号（上から見た形）。うえ=あか・まんなか=き・した=あお
+  c.save();
+  c.fillStyle = 'rgba(0,0,0,.25)'; rr(c, RH + 0.2, -RH - 5.75, 1.0, 3.1, 0.35); c.fill();
+  c.fillStyle = '#2b2f36'; rr(c, RH + 0.1, -RH - 5.9, 1.0, 3.1, 0.35); c.fill();
+  const cols = [['red', '#ff3b30', '#5a2a2a'], ['yellow', '#ffcc00', '#5a5226'], ['green', '#34c759', '#1f4a2b']];
+  for (let n = 0; n < 3; n++) {
+    const on = cols[n][0] === st, ly = -RH - 5.9 + 0.62 + n * 0.93;
+    if (on) { c.fillStyle = 'rgba(255,255,255,.22)'; circle(c, RH + 0.6, ly, 0.78); c.fill(); }
+    c.fillStyle = on ? cols[n][1] : cols[n][2]; circle(c, RH + 0.6, ly, 0.36); c.fill();
+  }
+  c.restore();
+}
 function drawTown(c, x, y, R) {
   c.fillStyle = pat.asphalt; c.fillRect(x - R, y - R, 2 * R, 2 * R);
   const i0 = Math.floor((x - R) / G), i1 = Math.floor((x + R) / G), j0 = Math.floor((y - R) / G), j1 = Math.floor((y + R) / G);
@@ -429,7 +448,10 @@ function drawTown(c, x, y, R) {
     for (let a = 0; a < 4; a++) {
       c.fillStyle = 'rgba(255,255,255,.9)';
       for (let q = -RH + 0.35; q < RH - 0.5; q += 0.92) c.fillRect(q, -RH - 1.9, 0.5, 1.6);   // 横断歩道
-      c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);                                           // 停止線
+      const st = sigState(i, j, a & 1);
+      c.fillStyle = st === 'red' ? 'rgba(255,70,60,.95)' : 'rgba(255,255,255,.9)';
+      c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);
+      drawSignalHead(c, st);                                           // 停止線
       c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.14; c.setLineDash([1.4, 1.4]);
       c.beginPath(); c.moveTo(0, -RH - 2.8); c.lineTo(0, -G / 2); c.stroke(); c.setLineDash([]);  // センターライン
       if (hash(i, j, a) < .45) { c.fillStyle = 'rgba(40,42,48,.55)'; circle(c, (hash(i, j, a + 9) < .5 ? -1 : 1) * 1.3, -G / 2 + 1.5 + hash(i, j, a + 5) * 3, 0.42); c.fill(); c.strokeStyle = 'rgba(160,165,172,.6)'; c.lineWidth = 0.06; c.stroke(); }
@@ -634,7 +656,7 @@ let wakeLock = null;
 
 function startGame(m, fromTouch) {
   mode = m; state = 'play'; started = false; time = 0;
-  car.v = 0; car.st = 0; car.h = 0; bounceT = 0;
+  car.v = 0; car.st = 0; car.h = 0; bounceT = 0; zoneP = null; waitI.ok = false; waitI.t = 0; redT = 0;
   if (m === 'town') { car.x = -RH / 2; car.y = G / 2; } else { car.x = 0; car.y = 0; }
   traffic = []; parts = []; skids = []; collected = new Set(); starCount = 0; $('starN').textContent = '0';
   $('menu').classList.add('hide'); document.body.classList.add('play'); document.body.classList.remove('started');
@@ -758,6 +780,7 @@ function update(dt) {
     }
   };
   if (town) townStars(ccx, ccy, 4, pick); else highwayStars(ccy, 4, pick);
+  if (town) trafficRules(dt, ccx, ccy, fx, fy);
 
   // けむり・土ぼこり・タイヤのあと
   const rx = Math.cos(car.h), ry = Math.sin(car.h), sp = Math.abs(car.v);
@@ -781,6 +804,34 @@ function update(dt) {
     engFilt.frequency.value = 300 + sp * 60;
     engGain.gain.value = on ? 0.025 + Math.min(0.045, sp * 0.004) + (acc > 0.1 ? 0.012 : 0) : 0;
   }
+}
+let zoneP = null, waitI = { i: 0, j: 0, t: 0, ok: false }, redT = 0;
+function awardStar(sx, sy, msg) {
+  starCount++; $('starN').textContent = starCount;
+  beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
+  for (let n = 0; n < 10; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.6, max: 0.6, r: 0.18, col: '255,216,46' });
+  toast(msg);
+}
+// 信号のルール: 赤で止まって待って青で進むと⭐。赤で進んでも罰はなく、おしらせだけ。
+function trafficRules(dt, cx, cy, fx, fy) {
+  redT -= dt;
+  const ii = Math.round(cx / G), jj = Math.round(cy / G), lx = cx - ii * G, ly = cy - jj * G;
+  const inside = Math.abs(lx) < RH && Math.abs(ly) < RH;
+  if (inside && zoneP && !zoneP.inside && zoneP.i === ii && zoneP.j === jj) {
+    const s = sigState(ii, jj, Math.abs(zoneP.lx) > Math.abs(zoneP.ly) ? 1 : 0);
+    if (waitI.ok && waitI.i === ii && waitI.j === jj && s === 'green') awardStar(cx, cy, '🚦 まてたね！ えらい！ ⭐');
+    else if (s === 'red' && car.v > 1 && redT <= 0) { toast('🚦 あかだよ！ とまろうね'); beep(300, 0.25, 'square', 0.1, 200); redT = 3; }
+    waitI.ok = false; waitI.t = 0;
+  }
+  zoneP = { i: ii, j: jj, lx, ly, inside };
+  let waiting = false;
+  if (!inside && Math.abs(car.v) < 0.4) {
+    const ax = Math.abs(lx) < RH && Math.abs(ly) > RH && Math.abs(ly) < RH + 7 ? 0 : Math.abs(ly) < RH && Math.abs(lx) > RH && Math.abs(lx) < RH + 7 ? 1 : -1;
+    const d = Math.hypot(lx, ly) || 1;
+    if (ax >= 0 && (fx * -lx + fy * -ly) / d > 0.6 && sigState(ii, jj, ax) === 'red') waiting = true;
+  }
+  if (waiting) { waitI.t += dt; if (waitI.t > 0.8) { waitI.ok = true; waitI.i = ii; waitI.j = jj; } }
+  else { waitI.t = 0; if (Math.hypot(lx, ly) > RH + 9) waitI.ok = false; }
 }
 function spark() {
   if (Math.random() < .4) parts.push({ x: car.x + Math.sign(car.x) * 0.95, y: car.y - AX + (Math.random() - .5) * 3, vx: -Math.sign(car.x) * 2, vy: 4 + Math.random() * 3, life: 0.25, max: 0.25, r: 0.1, col: '255,200,80' });
