@@ -121,19 +121,6 @@ body.play.tui:not(.padon) #touch { display: flex; }
 body.play.tui:not(.padon) #btnHorn { display: block; }
 body.tui #sizer div { display: none; }
 body.tui #sizer button { padding: 10px 14px; font-size: 14px; }
-#sigHud {
-  position: fixed; z-index: 5; right: 10px; top: max(58px, calc(env(safe-area-inset-top) + 50px)); display: none;   /* みぎがわ: 道の信号（ひだり）と かさならない */
-  width: max-content; padding: 10px 14px 11px; border-radius: 18px; background: rgba(20,24,30,.82); border: 3px solid #666; pointer-events: none;
-}
-#sigHud.show { display: block; }
-body:not(.started) #sigHud { display: none !important; }   /* スタートするまでは出さない（案内文と重なるため）*/
-#sigHud .lamps { display: flex; gap: 10px; }
-#sigHud .lamps i { width: 38px; height: 38px; border-radius: 50%; background: #3a3f48; }
-#sigHud .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.2); margin-top: 8px; overflow: hidden; }
-#sigBar { display: block; height: 100%; background: #fff; }
-#sigHud.red { border-color: #ff3b30; } #sigHud.red .lamps i:nth-child(3) { background: #ff3b30; box-shadow: 0 0 12px #ff3b30; }
-#sigHud.yellow { border-color: #ffcc00; } #sigHud.yellow .lamps i:nth-child(2) { background: #ffcc00; box-shadow: 0 0 12px #ffcc00; }
-#sigHud.green { border-color: #34c759; } #sigHud.green .lamps i:nth-child(1) { background: #34c759; box-shadow: 0 0 12px #34c759; }
 #toast {
   position: fixed; z-index: 6; left: 50%; top: 16%; transform: translate(-50%, 0) scale(.6);
   background: #ffd23f; color: #3a2a00; border-radius: 999px; padding: 10px 22px; font-size: 20px;
@@ -150,9 +137,9 @@ body:not(.started) #sigHud { display: none !important; }   /* スタートする
   <p class="lead">スマホのうえに ミニカーを おいて、<br>コントローラーで うんてんしよう！</p>
   <div id="pad">🎮 コントローラーの ボタンを 1かい おしてね</div>
   <div style="font-size:12px;opacity:.75;font-weight:400;text-align:center">🕹️ コントローラーが ないときは、スタートすると がめんの ボタンが でるよ</div>
-  <div id="soundHint" style="font-size:12px;opacity:.75;font-weight:400">🔊 おとが ならないときは、がめんを 1かい タッチしてね（iPhone）</div>
+  <div id="soundHint" style="font-size:12px;opacity:.75;font-weight:400">🔊 おとが ならないときは、がめんを 1かい タッチ。iPhoneは マナーモードを オフ、おんりょうも あげてね</div>
   <div class="modes">
-    <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>しんごうも あるよ</small></button>
+    <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>すきな みちを じゆうに</small></button>
     <button class="mode" data-mode="highway"><span class="ico">🛣️</span><b>こうそくどうろ</b><small>くるまを よけて びゅーん</small></button>
   </div>
   <div class="opts">
@@ -177,7 +164,6 @@ body:not(.started) #sigHud { display: none !important; }   /* スタートする
       <tr><td>X</td><td>クラクション</td></tr>
       <tr><td>L / R</td><td>ミニカーの枠サイズ調整</td></tr>
       <tr><td>がめんの ボタン</td><td>コントローラーがないとき用。◀▶でハンドル、アクセル・ブレーキ、📢クラクション（コントローラーをつなぐと自動で消えます）</td></tr>
-      <tr><td>しんごう（まち）</td><td>赤でとまって待ち、青で進むと⭐ボーナス。赤で進んでもバツはありません</td></tr>
       <tr><td>＋ / −</td><td>メニューにもどる</td></tr>
     </table>
     <h3>ちゅうい</h3>
@@ -187,7 +173,7 @@ body:not(.started) #sigHud { display: none !important; }   /* スタートする
       <li>コントローラーがない場合はキーボード（矢印キー / スペース）でも動かせます。</li>
     </ul>
   </details>
-  <div id="ver">v4 ・ ミニカードライブ</div>
+  <div id="ver">v5 ・ ミニカードライブ</div>
 </div>
 
 <div id="stars" class="hud">⭐ <span id="starN">0</span></div>
@@ -199,7 +185,6 @@ body:not(.started) #sigHud { display: none !important; }   /* スタートする
   <div class="grp r"><button class="tb brk" data-k="brk">ブレーキ</button><button class="tb acc" data-k="acc">アクセル</button></div>
 </div>
 <button id="btnHorn" data-k="horn">📢</button>
-<div id="sigHud"><div class="lamps"><i></i><i></i><i></i></div><div class="bar"><span id="sigBar"></span></div></div>
 <div id="toast"></div>
 
 <script>
@@ -467,15 +452,6 @@ function drawBlock(c, b) {
     }
   }
 }
-// 信号: 交差点ごとに少しずつずらして、たてとよこが交互に青になる（青8秒・黄2秒・そのあと両方赤で1秒）
-const SIG_T = 22, SIG_G = 8, SIG_Y = 2;
-function sigInfo(i, j, axis) {   // いまの色と、その色が あと何秒つづくか
-  const u = (((time + hash(i, j, 61) * SIG_T + axis * SIG_T / 2) % SIG_T) + SIG_T) % SIG_T;
-  if (u < SIG_G) return { s: 'green', left: SIG_G - u, tot: SIG_G };
-  if (u < SIG_G + SIG_Y) return { s: 'yellow', left: SIG_G + SIG_Y - u, tot: SIG_Y };
-  return { s: 'red', left: SIG_T - u, tot: SIG_T - SIG_G - SIG_Y };
-}
-function sigState(i, j, axis) { return sigInfo(i, j, axis).s; }
 function drawTown(c, x, y, R) {
   c.fillStyle = pat.asphalt; c.fillRect(x - R, y - R, 2 * R, 2 * R);
   const i0 = Math.floor((x - R) / G), i1 = Math.floor((x + R) / G), j0 = Math.floor((y - R) / G), j1 = Math.floor((y + R) / G);
@@ -487,8 +463,7 @@ function drawTown(c, x, y, R) {
     for (let a = 0; a < 4; a++) {
       c.fillStyle = 'rgba(255,255,255,.9)';
       for (let q = -RH + 0.35; q < RH - 0.5; q += 0.92) c.fillRect(q, -RH - 1.9, 0.5, 1.6);   // 横断歩道
-      const st = sigState(i, j, a & 1);
-      c.fillStyle = st === 'red' ? 'rgba(255,70,60,.95)' : st === 'yellow' ? 'rgba(255,204,0,.95)' : 'rgba(70,220,120,.95)';
+      c.fillStyle = 'rgba(255,255,255,.9)';
       c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);                                           // 停止線
       c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.14; c.setLineDash([1.4, 1.4]);
       c.beginPath(); c.moveTo(0, -RH - 2.8); c.lineTo(0, -G / 2); c.stroke(); c.setLineDash([]);  // センターライン
@@ -658,19 +633,38 @@ function readInput() {
 // ================================================================
 //  音
 // ================================================================
-let AC = null, engOsc, engGain, engFilt;
+let AC = null, engOsc, engGain, engFilt, silentEl = null;
+// iPhoneの「マナーモード」でも鳴らすため、無音の短い音をずっとループさせる（これで再生音として扱われる）
+function silentWavUrl() {
+  const n = 800, b = new Uint8Array(44 + n), dv = new DataView(b.buffer);
+  const w = (o, t) => { for (let k = 0; k < t.length; k++) b[o + k] = t.charCodeAt(k); };
+  w(0, 'RIFF'); dv.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true); w(36, 'data'); dv.setUint32(40, n, true);
+  b.fill(128, 44);
+  return URL.createObjectURL(new Blob([b], { type: 'audio/wav' }));
+}
 function initAudio() {
   if (!opt.sound) return;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+  try {
+    if (!silentEl) { silentEl = new Audio(silentWavUrl()); silentEl.loop = true; silentEl.setAttribute('playsinline', ''); }
+    if (silentEl.paused) { const pr = silentEl.play(); if (pr && pr.catch) pr.catch(() => {}); }
+  } catch (e) {}
   try {
     if (!AC) {
       AC = new (window.AudioContext || window.webkitAudioContext)();
       engOsc = AC.createOscillator(); engOsc.type = 'sawtooth';
-      engFilt = AC.createBiquadFilter(); engFilt.type = 'lowpass'; engFilt.frequency.value = 420;
+      engFilt = AC.createBiquadFilter(); engFilt.type = 'lowpass'; engFilt.frequency.value = 600;
       engGain = AC.createGain(); engGain.gain.value = 0;
       engOsc.connect(engFilt); engFilt.connect(engGain); engGain.connect(AC.destination); engOsc.start();
     }
-    if (AC.state === 'suspended') AC.resume();
+    if (AC.state !== 'running') { const pr = AC.resume(); if (pr && pr.catch) pr.catch(() => {}); }
   } catch (e) { AC = null; }
+}
+function testBeep() {   // おとの スイッチを いれたとき「ピッ」と鳴らして、聞こえるか たしかめられる
+  initAudio(); if (!AC) return;
+  const go = () => { beep(660, 0.12, 'sine', 0.22); setTimeout(() => beep(990, 0.2, 'sine', 0.22), 130); };
+  if (AC.state === 'running') go(); else { const pr = AC.resume(); if (pr && pr.then) pr.then(go).catch(() => {}); }
 }
 function beep(f, dur, type, vol, f2) {
   if (!AC || !opt.sound || AC.state !== 'running') return;
@@ -695,7 +689,7 @@ let wakeLock = null, touchUI = false;
 
 function startGame(m, fromTouch) {
   mode = m; state = 'play'; started = false; time = 0;
-  car.v = 0; car.st = 0; car.h = 0; bounceT = 0; zoneP = null; waitI.ok = false; waitI.t = 0; redT = 0; showSig(null);
+  car.v = 0; car.st = 0; car.h = 0; bounceT = 0;
   if (m === 'town') { car.x = -RH / 2; car.y = G / 2; } else { car.x = 0; car.y = 0; }
   traffic = []; parts = []; skids = []; collected = new Set(); starCount = 0; $('starN').textContent = '0';
   $('menu').classList.add('hide'); document.body.classList.add('play'); document.body.classList.remove('started');
@@ -709,7 +703,7 @@ function startGame(m, fromTouch) {
 function goMenu() {
   state = 'menu'; car.v = 0;
   $('menu').classList.remove('hide'); document.body.classList.remove('play', 'started', 'tui');
-  showSig(null); Object.keys(ui).forEach(k => ui[k] = 0); document.querySelectorAll('.tb.on, #btnHorn.on').forEach(e => e.classList.remove('on')); layoutGuide();
+  Object.keys(ui).forEach(k => ui[k] = 0); document.querySelectorAll('.tb.on, #btnHorn.on').forEach(e => e.classList.remove('on')); layoutGuide();
   if (engGain) engGain.gain.value = 0;
   try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
 }
@@ -824,7 +818,6 @@ function update(dt) {
     }
   };
   if (town) townStars(ccx, ccy, 4, pick); else highwayStars(ccy, 4, pick);
-  if (town) trafficRules(dt, ccx, ccy, fx, fy);
 
   // けむり・土ぼこり・タイヤのあと
   const rx = Math.cos(car.h), ry = Math.sin(car.h), sp = Math.abs(car.v);
@@ -844,48 +837,10 @@ function update(dt) {
   // エンジン音
   if (AC && engGain) {
     const on = opt.sound && started;
-    engOsc.frequency.value = 52 + sp * 13 + (acc > 0.1 ? 12 : 0);
-    engFilt.frequency.value = 300 + sp * 60;
-    engGain.gain.value = on ? 0.025 + Math.min(0.045, sp * 0.004) + (acc > 0.1 ? 0.012 : 0) : 0;
+    engOsc.frequency.value = 95 + sp * 28 + (acc > 0.1 ? 14 : 0);   // スマホのスピーカーで聞こえる高さにする
+    engFilt.frequency.value = 500 + sp * 120;
+    engGain.gain.value = on ? 0.05 + Math.min(0.07, sp * 0.014) + (acc > 0.1 ? 0.02 : 0) : 0;
   }
-}
-let zoneP = null, waitI = { i: 0, j: 0, t: 0, ok: false }, redT = 0, sigLast = '';
-function showSig(inf) {   // 画面のすみの大きな信号（まえの交差点が ちかづいたら でる）
-  const el = $('sigHud');
-  if (!inf) { if (sigLast) { el.className = ''; sigLast = ''; } return; }
-  if (inf.s !== sigLast) { sigLast = inf.s; el.className = 'show ' + inf.s; }
-  $('sigBar').style.width = (inf.left / inf.tot * 100).toFixed(0) + '%';
-}
-function awardStar(sx, sy) {
-  starCount++; $('starN').textContent = starCount;
-  beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
-  for (let n = 0; n < 10; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.6, max: 0.6, r: 0.18, col: '255,216,46' });
-}
-// 信号のルール: 赤で止まって待って青で進むと⭐。赤で進んでも罰も通知もない。
-function trafficRules(dt, cx, cy, fx, fy) {
-  redT -= dt;
-  const ii = Math.round(cx / G), jj = Math.round(cy / G), lx = cx - ii * G, ly = cy - jj * G;
-  const inside = Math.abs(lx) < RH && Math.abs(ly) < RH;
-  if (inside && zoneP && !zoneP.inside && zoneP.i === ii && zoneP.j === jj) {
-    const s = sigState(ii, jj, Math.abs(zoneP.lx) > Math.abs(zoneP.ly) ? 1 : 0);
-    if (waitI.ok && waitI.i === ii && waitI.j === jj && s === 'green') awardStar(cx, cy);
-    waitI.ok = false; waitI.t = 0;
-  }
-  zoneP = { i: ii, j: jj, lx, ly, inside };
-  let waiting = false;
-  if (!inside && Math.abs(car.v) < 0.4) {
-    const ax = Math.abs(lx) < RH && Math.abs(ly) > RH && Math.abs(ly) < RH + 7 ? 0 : Math.abs(ly) < RH && Math.abs(lx) > RH && Math.abs(lx) < RH + 7 ? 1 : -1;
-    const d = Math.hypot(lx, ly) || 1;
-    if (ax >= 0 && (fx * -lx + fy * -ly) / d > 0.6 && sigState(ii, jj, ax) === 'red') waiting = true;
-  }
-  if (waiting) { waitI.t += dt; if (waitI.t > 0.8) { waitI.ok = true; waitI.i = ii; waitI.j = jj; } }
-  else { waitI.t = 0; if (Math.hypot(lx, ly) > RH + 9) waitI.ok = false; }
-  let hud = null;
-  if (!inside) {
-    const ax2 = Math.abs(lx) < RH && Math.abs(ly) > RH ? 0 : Math.abs(ly) < RH && Math.abs(lx) > RH ? 1 : -1, d2 = Math.hypot(lx, ly) || 1;
-    if (ax2 >= 0 && (fx * -lx + fy * -ly) / d2 > 0.5) hud = sigInfo(ii, jj, ax2);
-  }
-  showSig(hud);
 }
 function spark() {
   if (Math.random() < .4) parts.push({ x: car.x + Math.sign(car.x) * 0.95, y: car.y - AX + (Math.random() - .5) * 3, vx: -Math.sign(car.x) * 2, vy: 4 + Math.random() * 3, life: 0.25, max: 0.25, r: 0.1, col: '255,200,80' });
@@ -960,7 +915,7 @@ function frame(t) {
 document.querySelectorAll('.mode').forEach((el, n) => el.addEventListener('click', () => { selIdx = n; startGame(el.dataset.mode, true); }));
 document.querySelectorAll('.opt').forEach(el => {
   const k = el.dataset.opt; el.classList.toggle('on', !!opt[k]);
-  el.addEventListener('click', () => { opt[k] = !opt[k]; el.classList.toggle('on', opt[k]); saveOpt(); if (k === 'sound' && opt.sound) initAudio(); });
+  el.addEventListener('click', () => { opt[k] = !opt[k]; el.classList.toggle('on', opt[k]); saveOpt(); if (k === 'sound' && opt.sound) testBeep(); });
 });
 // メニューへは長押しで（ミニカーの誤タッチで戻らないように）
 (() => {
@@ -975,7 +930,8 @@ $('szp').addEventListener('click', () => resizeCar(6));
 // 走行中はスクロールやズームをさせない
 document.addEventListener('touchmove', e => { if (state === 'play') e.preventDefault(); }, { passive: false });
 document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('pointerdown', () => initAudio());
+// iPhoneは「ゆびを はなした」とき(touchend / click)でないと音を解除できない。いろいろな操作で何度でも試す
+['touchend', 'click', 'pointerup', 'keydown'].forEach(ev => document.addEventListener(ev, () => { if (opt.sound && (!AC || AC.state !== 'running' || !silentEl || silentEl.paused)) initAudio(); }, true));
 window.addEventListener('gamepadconnected', () => {});   // 一部ブラウザはこのリスナーがないとパッドを報告しない
 
 // がめんの ボタン（◀ ▶ アクセル ブレーキ 📢）。ゆびを はなす・はずれると はなしたことになる
