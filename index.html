@@ -110,6 +110,7 @@ body.started #guide, body.started #sizer { display: none; }
   <h1>🚗 ミニカードライブ</h1>
   <p class="lead">スマホのうえに ミニカーを おいて、<br>コントローラーで うんてんしよう！</p>
   <div id="pad">🎮 コントローラーの ボタンを 1かい おしてね</div>
+  <div id="soundHint" style="font-size:12px;opacity:.75;font-weight:400">🔊 おとが ならないときは、がめんを 1かい タッチしてね（iPhone）</div>
   <div class="modes">
     <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>すきな みちを じゆうに</small></button>
     <button class="mode" data-mode="highway"><span class="ico">🛣️</span><b>こうそくどうろ</b><small>くるまを よけて びゅーん</small></button>
@@ -618,7 +619,7 @@ function beep(f, dur, type, vol, f2) {
   g.gain.setValueAtTime(vol || 0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
 }
-let hornT = 0, bumpT = 0;
+let hornT = 0, bumpT = 0, bounceT = 0;
 function bump() { if (bumpT <= 0) { beep(110, 0.18, 'square', 0.16, 50); bumpT = 0.3; } }
 
 // ================================================================
@@ -633,12 +634,12 @@ let wakeLock = null;
 
 function startGame(m, fromTouch) {
   mode = m; state = 'play'; started = false; time = 0;
-  car.v = 0; car.st = 0; car.h = 0;
+  car.v = 0; car.st = 0; car.h = 0; bounceT = 0;
   if (m === 'town') { car.x = -RH / 2; car.y = G / 2; } else { car.x = 0; car.y = 0; }
   traffic = []; parts = []; skids = []; collected = new Set(); starCount = 0; $('starN').textContent = '0';
   $('menu').classList.add('hide'); document.body.classList.add('play'); document.body.classList.remove('started');
   initAudio();
-  if (fromTouch) { try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el).catch(() => {}); } catch (e) {} }
+  if (fromTouch) { try { const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); if (r && r.catch) r.catch(() => {}); } } catch (e) {} }
   try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {}); } catch (e) {}
   layoutGuide();
 }
@@ -695,6 +696,7 @@ function update(dt) {
     else { acc = 0; brk = 0; }
   }
   if (opt.auto && started && brk < 0.2) acc = 1;
+  bounceT -= dt; if (bounceT > 0) acc = 0;   // はね返りの間は少し はなれる（ハンドルで向きを変えられる）
   if (inp.horn && hornT <= 0) { beep(420, 0.32, 'square', 0.12); beep(530, 0.32, 'square', 0.12); hornT = 0.4; }
 
   const town = mode === 'town';
@@ -717,7 +719,7 @@ function update(dt) {
   // ハンドル
   car.st += (inp.steer - car.st) * Math.min(1, dt * 8);
   const ox = car.x, oy = car.y, oh = car.h;
-  if (town) car.h += car.v * car.st * 0.24 / (1 + Math.abs(car.v) / 14) * dt;
+  if (town) car.h += (bounceT > 0 ? Math.abs(car.v) : car.v) * car.st * 0.24 / (1 + Math.abs(car.v) / 14) * dt;   // はね返り中は後ろへ下がっても同じ向きに回る
   else car.h += (car.st * 0.24 * Math.min(1, car.v / 3) - car.h) * Math.min(1, dt * 5);
   car.x += Math.sin(car.h) * car.v * dt; car.y -= Math.cos(car.h) * car.v * dt;
 
@@ -725,7 +727,7 @@ function update(dt) {
     if (carPoints(car.x, car.y, car.h).some(p => solidAt(p[0], p[1]))) {
       car.x = ox; car.y = oy; car.h = oh;
       if (Math.abs(car.v) > 1) bump();
-      car.v = -car.v * 0.3;
+      car.v = (car.v >= 0 ? -1 : 1) * Math.max(2.4, Math.abs(car.v) * 0.3); bounceT = 0.45;
     }
   } else {
     const lim = HW_RAIL - 1.05;
@@ -868,7 +870,7 @@ $('szp').addEventListener('click', () => resizeCar(6));
 // 走行中はスクロールやズームをさせない
 document.addEventListener('touchmove', e => { if (state === 'play') e.preventDefault(); }, { passive: false });
 document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('pointerdown', () => { if (state === 'play') initAudio(); });
+document.addEventListener('pointerdown', () => initAudio());
 window.addEventListener('gamepadconnected', () => {});   // 一部ブラウザはこのリスナーがないとパッドを報告しない
 
 resize();
