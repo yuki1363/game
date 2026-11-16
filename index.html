@@ -834,7 +834,6 @@ function update(dt) {
       collected.add(key); starCount++; $('starN').textContent = starCount;
       beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
       for (let n = 0; n < 8; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.5, max: 0.5, r: 0.16, col: '255,216,46' });
-      if (starCount % 10 === 0) toast('⭐ ' + starCount + 'こ あつめた！ すごい！');
     }
   };
   if (town) townStars(ccx, ccy, 4, pick); else highwayStars(ccy, 4, pick);
@@ -870,21 +869,19 @@ function showSig(inf) {   // 画面のすみの大きな信号（まえの交差
   if (inf.s !== sigLast) { sigLast = inf.s; el.className = 'show ' + inf.s; }
   $('sigBar').style.width = (inf.left / inf.tot * 100).toFixed(0) + '%';
 }
-function awardStar(sx, sy, msg) {
+function awardStar(sx, sy) {
   starCount++; $('starN').textContent = starCount;
   beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
   for (let n = 0; n < 10; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.6, max: 0.6, r: 0.18, col: '255,216,46' });
-  toast(msg);
 }
-// 信号のルール: 赤で止まって待って青で進むと⭐。赤で進んでも罰はなく、おしらせだけ。
+// 信号のルール: 赤で止まって待って青で進むと⭐。赤で進んでも罰も通知もない。
 function trafficRules(dt, cx, cy, fx, fy) {
   redT -= dt;
   const ii = Math.round(cx / G), jj = Math.round(cy / G), lx = cx - ii * G, ly = cy - jj * G;
   const inside = Math.abs(lx) < RH && Math.abs(ly) < RH;
   if (inside && zoneP && !zoneP.inside && zoneP.i === ii && zoneP.j === jj) {
     const s = sigState(ii, jj, Math.abs(zoneP.lx) > Math.abs(zoneP.ly) ? 1 : 0);
-    if (waitI.ok && waitI.i === ii && waitI.j === jj && s === 'green') awardStar(cx, cy, '🚦 まてたね！ えらい！ ⭐');
-    else if (s === 'red' && car.v > 1 && redT <= 0) { toast('🚦 あかだよ！ とまろうね'); beep(300, 0.25, 'square', 0.1, 200); redT = 3; }
+    if (waitI.ok && waitI.i === ii && waitI.j === jj && s === 'green') awardStar(cx, cy);
     waitI.ok = false; waitI.t = 0;
   }
   zoneP = { i: ii, j: jj, lx, ly, inside };
