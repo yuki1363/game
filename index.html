@@ -469,8 +469,8 @@ function drawBlock(c, b) {
     }
   }
 }
-// 信号: 交差点ごとに少しずつずらして、たてとよこが交互に青になる（青12秒・黄3秒・そのあと両方赤で2秒）
-const SIG_T = 34, SIG_G = 12, SIG_Y = 3;
+// 信号: 交差点ごとに少しずつずらして、たてとよこが交互に青になる（青8秒・黄2秒・そのあと両方赤で1秒）
+const SIG_T = 22, SIG_G = 8, SIG_Y = 2;
 function sigInfo(i, j, axis) {   // いまの色と、その色が あと何秒つづくか
   const u = (((time + hash(i, j, 61) * SIG_T + axis * SIG_T / 2) % SIG_T) + SIG_T) % SIG_T;
   if (u < SIG_G) return { s: 'green', left: SIG_G - u, tot: SIG_G };
