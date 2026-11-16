@@ -95,6 +95,32 @@ body.play .hud { display: block; }
 }
 #sizer div { font-size: 11px; font-weight: 400; margin-bottom: 6px; text-shadow: 0 1px 4px #000; }
 body.started #guide, body.started #sizer { display: none; }
+/* ─── がめんの ボタン（コントローラーが ないとき）─── */
+#touch {
+  position: fixed; z-index: 5; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom));
+  height: var(--ch, 120px); display: none; gap: 16px; padding: 0 12px;
+}
+body.play.tui:not(.padon) #touch { display: flex; }
+#touch .grp { display: flex; gap: 10px; flex: 1; }
+#touch .grp.r { flex: 1.2; }
+.tb {
+  flex: 1; font: inherit; font-size: 28px; color: #fff; border-radius: 24px; padding: 0;
+  background: rgba(255,255,255,.16); border: 3px solid rgba(255,255,255,.4);
+  touch-action: none; -webkit-user-select: none; user-select: none;
+}
+.tb small { display: block; font-size: 12px; font-weight: 400; opacity: .85; margin-top: 2px; }
+.tb.acc { background: rgba(55,201,124,.55); font-size: 20px; flex: 1.3; }
+.tb.brk { background: rgba(232,72,63,.5); font-size: 16px; }
+.tb.on { background: rgba(255,210,63,.85); color: #3a2a00; transform: scale(.95); }
+#btnHorn {
+  position: fixed; z-index: 5; top: max(8px, env(safe-area-inset-top)); left: 112px; display: none;
+  width: 44px; height: 44px; border-radius: 50%; border: 0; font-size: 22px; padding: 0;
+  background: rgba(0,0,0,.45); touch-action: none; -webkit-user-select: none; user-select: none;
+}
+#btnHorn.on { background: rgba(255,210,63,.85); }
+body.play.tui:not(.padon) #btnHorn { display: block; }
+body.tui #sizer div { display: none; }
+body.tui #sizer button { padding: 10px 14px; font-size: 14px; }
 #toast {
   position: fixed; z-index: 6; left: 50%; top: 16%; transform: translate(-50%, 0) scale(.6);
   background: #ffd23f; color: #3a2a00; border-radius: 999px; padding: 10px 22px; font-size: 20px;
@@ -110,12 +136,14 @@ body.started #guide, body.started #sizer { display: none; }
   <h1>🚗 ミニカードライブ</h1>
   <p class="lead">スマホのうえに ミニカーを おいて、<br>コントローラーで うんてんしよう！</p>
   <div id="pad">🎮 コントローラーの ボタンを 1かい おしてね</div>
+  <div style="font-size:12px;opacity:.75;font-weight:400;text-align:center">🕹️ コントローラーが ないときは、スタートすると がめんの ボタンが でるよ</div>
   <div id="soundHint" style="font-size:12px;opacity:.75;font-weight:400">🔊 おとが ならないときは、がめんを 1かい タッチしてね（iPhone）</div>
   <div class="modes">
     <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>しんごうも あるよ</small></button>
     <button class="mode" data-mode="highway"><span class="ico">🛣️</span><b>こうそくどうろ</b><small>くるまを よけて びゅーん</small></button>
   </div>
   <div class="opts">
+    <div class="opt" data-opt="touch"><span>がめんの ボタンで うんてん<small>コントローラーが ないとき（ミニカーは がめんの うえに おくよ）</small></span><i class="sw"></i></div>
     <div class="opt" data-opt="auto"><span>じどうで はしる<small>ハンドルだけで あそべる（ちいさい子むけ）</small></span><i class="sw"></i></div>
     <div class="opt" data-opt="virtual"><span>がめんに くるまを だす<small>ミニカーが ないとき用</small></span><i class="sw"></i></div>
     <div class="opt" data-opt="sound"><span>おと<small>エンジン・クラクション</small></span><i class="sw"></i></div>
@@ -135,6 +163,7 @@ body.started #guide, body.started #sizer { display: none; }
       <tr><td>Y・ZL / スティック↓</td><td>ブレーキ・バック</td></tr>
       <tr><td>X</td><td>クラクション</td></tr>
       <tr><td>L / R</td><td>ミニカーの枠サイズ調整</td></tr>
+      <tr><td>がめんの ボタン</td><td>コントローラーがないとき用。◀▶でハンドル、アクセル・ブレーキ、📢クラクション（コントローラーをつなぐと自動で消えます）</td></tr>
       <tr><td>しんごう（まち）</td><td>赤でとまって待ち、青で進むと⭐ボーナス。赤で進んでもバツはありません</td></tr>
       <tr><td>＋ / −</td><td>メニューにもどる</td></tr>
     </table>
@@ -145,13 +174,18 @@ body.started #guide, body.started #sizer { display: none; }
       <li>コントローラーがない場合はキーボード（矢印キー / スペース）でも動かせます。</li>
     </ul>
   </details>
-  <div id="ver">v2 ・ ミニカードライブ</div>
+  <div id="ver">v3 ・ ミニカードライブ</div>
 </div>
 
 <div id="stars" class="hud">⭐ <span id="starN">0</span></div>
 <button id="btnMenu" class="hud"><i></i><span>メニュー（ながおし）</span></button>
 <div id="guide" class="hud">ここに ミニカーを おいてね<small>Aボタン か スティック↑ で しゅっぱつ！</small></div>
 <div id="sizer" class="hud"><div>わくを ミニカーの おおきさに あわせてね（L / R ボタンでも OK）</div><button id="szm">− ちいさく</button><button id="szp">＋ おおきく</button></div>
+<div id="touch">
+  <div class="grp"><button class="tb" data-k="left">◀</button><button class="tb" data-k="right">▶</button></div>
+  <div class="grp r"><button class="tb brk" data-k="brk">ブレーキ</button><button class="tb acc" data-k="acc">アクセル</button></div>
+</div>
+<button id="btnHorn" data-k="horn">📢</button>
 <div id="toast"></div>
 
 <script>
@@ -177,7 +211,7 @@ const $ = id => document.getElementById(id);
 let W = 0, H = 0, DPR = 1;
 
 // ─── 保存される設定 ───
-const opt = { carW: 0, auto: false, virtual: false, sound: true };
+const opt = { carW: 0, auto: false, virtual: false, sound: true, touch: ('ontouchstart' in window) || navigator.maxTouchPoints > 0 };
 try { Object.assign(opt, JSON.parse(localStorage.getItem('minicar-drive') || '{}')); } catch (e) {}
 function saveOpt() { try { localStorage.setItem('minicar-drive', JSON.stringify(opt)); } catch (e) {} }
 
@@ -581,6 +615,7 @@ function readInput() {
   latch.Escape = latch.Enter = false;
   if (keys.BracketLeft) o.size -= 1;
   if (keys.BracketRight) o.size += 1;
+  o.steer += ui.right - ui.left; o.acc = Math.max(o.acc, ui.acc); o.brk = Math.max(o.brk, ui.brk); if (ui.horn) o.horn = true;
   let found = false;
   const pads = navigator.getGamepads ? navigator.getGamepads() : [];
   for (const p of pads) {
@@ -609,7 +644,7 @@ function readInput() {
   }
   o.steer = clamp(o.steer, -1, 1);
   if (found !== padConnected) {
-    padConnected = found;
+    padConnected = found; document.body.classList.toggle('padon', found);
     $('pad').className = found ? 'ok' : '';
     $('pad').textContent = found ? '🎮 コントローラー つながったよ！ ←→でえらんで Aでスタート' : '🎮 コントローラーの ボタンを 1かい おしてね';
   }
@@ -652,7 +687,7 @@ const car = { x: -RH / 2, y: G / 2, h: 0, v: 0, st: 0 };
 let collected = new Set(), starCount = 0;
 let parts = [], skids = [];
 let selIdx = 0, prev = { steer: 0, ok: false, menu: false };
-let wakeLock = null;
+let wakeLock = null, touchUI = false;
 
 function startGame(m, fromTouch) {
   mode = m; state = 'play'; started = false; time = 0;
@@ -660,6 +695,8 @@ function startGame(m, fromTouch) {
   if (m === 'town') { car.x = -RH / 2; car.y = G / 2; } else { car.x = 0; car.y = 0; }
   traffic = []; parts = []; skids = []; collected = new Set(); starCount = 0; $('starN').textContent = '0';
   $('menu').classList.add('hide'); document.body.classList.add('play'); document.body.classList.remove('started');
+  touchUI = !!opt.touch && !padConnected; document.body.classList.toggle('tui', touchUI);
+  $('guide').innerHTML = touchUI ? 'ミニカーを わくに おいてね<small>みぎの アクセルを おすと しゅっぱつ！</small>' : 'ここに ミニカーを おいてね<small>Aボタン か スティック↑ で しゅっぱつ！</small>';
   initAudio();
   if (fromTouch) { try { const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); if (r && r.catch) r.catch(() => {}); } } catch (e) {} }
   try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {}); } catch (e) {}
@@ -667,7 +704,8 @@ function startGame(m, fromTouch) {
 }
 function goMenu() {
   state = 'menu'; car.v = 0;
-  $('menu').classList.remove('hide'); document.body.classList.remove('play', 'started');
+  $('menu').classList.remove('hide'); document.body.classList.remove('play', 'started', 'tui');
+  Object.keys(ui).forEach(k => ui[k] = 0); document.querySelectorAll('.tb.on, #btnHorn.on').forEach(e => e.classList.remove('on')); layoutGuide();
   if (engGain) engGain.gain.value = 0;
   try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
 }
@@ -679,12 +717,15 @@ document.addEventListener('visibilitychange', () => {
 // 画面上の車の位置（px）と拡大率
 function view() {
   const S = opt.carW / CAR_W, cx = W / 2, len = CAR_L * S;
-  const cy = Math.min(H * (mode === 'highway' && state === 'play' ? 0.68 : 0.56), H - len / 2 - 16), py = cy + AX * S;
+  const top = Math.max(190, 120 + 0.75 * S);   // がめんボタンのとき: ミニカーを うえに よせて、したに ボタンの ばしょを あける
+  const cy = (touchUI && state === 'play') ? top + len / 2 : Math.min(H * (mode === 'highway' && state === 'play' ? 0.68 : 0.56), H - len / 2 - 16), py = cy + AX * S;
   return { S, cx, cy, py, R: Math.hypot(W / 2, Math.max(py, H - py)) / S + 1 };
 }
 function layoutGuide() {
-  const v = view(), len = CAR_L * v.S;
-  $('guide').style.top = Math.max(50, v.cy - len / 2 - 150) + 'px';
+  const v = view(), len = CAR_L * v.S, bottom = v.cy + len / 2, tui = touchUI && state === 'play', sz = $('sizer');
+  $('guide').style.top = tui ? '62px' : Math.max(50, v.cy - len / 2 - 150) + 'px';
+  sz.style.top = tui ? (bottom + 8) + 'px' : ''; sz.style.bottom = tui ? 'auto' : '';
+  document.documentElement.style.setProperty('--ch', clamp(H - bottom - (started ? 0 : 58) - 20, 64, 150) + 'px');
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1600); }
 
@@ -714,7 +755,7 @@ function update(dt) {
 
   let acc = inp.acc, brk = inp.brk;
   if (!started) {
-    if (acc > 0.3) { started = true; document.body.classList.add('started'); initAudio(); }
+    if (acc > 0.3) { started = true; document.body.classList.add('started'); initAudio(); layoutGuide(); }
     else { acc = 0; brk = 0; }
   }
   if (opt.auto && started && brk < 0.2) acc = 1;
@@ -923,6 +964,14 @@ document.addEventListener('touchmove', e => { if (state === 'play') e.preventDef
 document.addEventListener('contextmenu', e => e.preventDefault());
 document.addEventListener('pointerdown', () => initAudio());
 window.addEventListener('gamepadconnected', () => {});   // 一部ブラウザはこのリスナーがないとパッドを報告しない
+
+// がめんの ボタン（◀ ▶ アクセル ブレーキ 📢）。ゆびを はなす・はずれると はなしたことになる
+const ui = { left: 0, right: 0, acc: 0, brk: 0, horn: 0 };
+document.querySelectorAll('.tb, #btnHorn').forEach(el => {
+  const k = el.dataset.k, set = v => { ui[k] = v; el.classList.toggle('on', !!v); };
+  el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (err) {} set(1); initAudio(); });
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(ev => el.addEventListener(ev, () => set(0)));
+});
 
 resize();
 buildPatterns();
