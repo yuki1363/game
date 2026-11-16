@@ -110,8 +110,9 @@ body.started #guide, body.started #sizer { display: none; }
   <h1>🚗 ミニカードライブ</h1>
   <p class="lead">スマホのうえに ミニカーを おいて、<br>コントローラーで うんてんしよう！</p>
   <div id="pad">🎮 コントローラーの ボタンを 1かい おしてね</div>
+  <div id="soundHint" style="font-size:12px;opacity:.75;font-weight:400">🔊 おとが ならないときは、がめんを 1かい タッチしてね（iPhone）</div>
   <div class="modes">
-    <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>すきな みちを じゆうに</small></button>
+    <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>しんごうも あるよ</small></button>
     <button class="mode" data-mode="highway"><span class="ico">🛣️</span><b>こうそくどうろ</b><small>くるまを よけて びゅーん</small></button>
   </div>
   <div class="opts">
@@ -134,6 +135,7 @@ body.started #guide, body.started #sizer { display: none; }
       <tr><td>Y・ZL / スティック↓</td><td>ブレーキ・バック</td></tr>
       <tr><td>X</td><td>クラクション</td></tr>
       <tr><td>L / R</td><td>ミニカーの枠サイズ調整</td></tr>
+      <tr><td>しんごう（まち）</td><td>赤でとまって待ち、青で進むと⭐ボーナス。赤で進んでもバツはありません</td></tr>
       <tr><td>＋ / −</td><td>メニューにもどる</td></tr>
     </table>
     <h3>ちゅうい</h3>
@@ -143,7 +145,7 @@ body.started #guide, body.started #sizer { display: none; }
       <li>コントローラーがない場合はキーボード（矢印キー / スペース）でも動かせます。</li>
     </ul>
   </details>
-  <div id="ver">v1 ・ ミニカードライブ</div>
+  <div id="ver">v2 ・ ミニカードライブ</div>
 </div>
 
 <div id="stars" class="hud">⭐ <span id="starN">0</span></div>
@@ -417,6 +419,24 @@ function drawBlock(c, b) {
     }
   }
 }
+// 信号: 交差点ごとに少しずつずらして、たてとよこが交互に青になる（青8秒・黄2秒・赤のこり）
+const SIG_T = 22;
+function sigState(i, j, axis) {
+  const u = (((time + hash(i, j, 61) * SIG_T + axis * SIG_T / 2) % SIG_T) + SIG_T) % SIG_T;
+  return u < 8 ? 'green' : u < 10 ? 'yellow' : 'red';
+}
+function drawSignalHead(c, st) {   // 歩道に立つ信号（上から見た形）。うえ=あか・まんなか=き・した=あお
+  c.save();
+  c.fillStyle = 'rgba(0,0,0,.25)'; rr(c, RH + 0.2, -RH - 5.75, 1.0, 3.1, 0.35); c.fill();
+  c.fillStyle = '#2b2f36'; rr(c, RH + 0.1, -RH - 5.9, 1.0, 3.1, 0.35); c.fill();
+  const cols = [['red', '#ff3b30', '#5a2a2a'], ['yellow', '#ffcc00', '#5a5226'], ['green', '#34c759', '#1f4a2b']];
+  for (let n = 0; n < 3; n++) {
+    const on = cols[n][0] === st, ly = -RH - 5.9 + 0.62 + n * 0.93;
+    if (on) { c.fillStyle = 'rgba(255,255,255,.22)'; circle(c, RH + 0.6, ly, 0.78); c.fill(); }
+    c.fillStyle = on ? cols[n][1] : cols[n][2]; circle(c, RH + 0.6, ly, 0.36); c.fill();
+  }
+  c.restore();
+}
 function drawTown(c, x, y, R) {
   c.fillStyle = pat.asphalt; c.fillRect(x - R, y - R, 2 * R, 2 * R);
   const i0 = Math.floor((x - R) / G), i1 = Math.floor((x + R) / G), j0 = Math.floor((y - R) / G), j1 = Math.floor((y + R) / G);
@@ -428,7 +448,10 @@ function drawTown(c, x, y, R) {
     for (let a = 0; a < 4; a++) {
       c.fillStyle = 'rgba(255,255,255,.9)';
       for (let q = -RH + 0.35; q < RH - 0.5; q += 0.92) c.fillRect(q, -RH - 1.9, 0.5, 1.6);   // 横断歩道
-      c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);                                           // 停止線
+      const st = sigState(i, j, a & 1);
+      c.fillStyle = st === 'red' ? 'rgba(255,70,60,.95)' : 'rgba(255,255,255,.9)';
+      c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);
+      drawSignalHead(c, st);                                           // 停止線
       c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.14; c.setLineDash([1.4, 1.4]);
       c.beginPath(); c.moveTo(0, -RH - 2.8); c.lineTo(0, -G / 2); c.stroke(); c.setLineDash([]);  // センターライン
       if (hash(i, j, a) < .45) { c.fillStyle = 'rgba(40,42,48,.55)'; circle(c, (hash(i, j, a + 9) < .5 ? -1 : 1) * 1.3, -G / 2 + 1.5 + hash(i, j, a + 5) * 3, 0.42); c.fill(); c.strokeStyle = 'rgba(160,165,172,.6)'; c.lineWidth = 0.06; c.stroke(); }
@@ -514,7 +537,7 @@ function updateTraffic(dt, cx, cy) {
     const lane = ((Math.random() * 3) | 0) - 1, ahead = car.v > 6 || Math.random() < .3;
     const y = cy + (ahead ? -1 : 1) * (26 + Math.random() * 16);
     if (!traffic.some(t => t.lane === lane && Math.abs(t.y - y) < 9))
-      traffic.push({ lane, x: lane * HW_LANE, y, v: 5.5 + Math.random() * 2.5, base: 0, col: COLORS[(Math.random() * COLORS.length) | 0], wait: 0 });
+      traffic.push({ lane, x: lane * HW_LANE, y, v: 3.2 + Math.random() * 2, base: 0, col: COLORS[(Math.random() * COLORS.length) | 0], wait: 0 });
   }
   for (const t of traffic) {
     if (!t.base) t.base = t.v;
@@ -618,7 +641,7 @@ function beep(f, dur, type, vol, f2) {
   g.gain.setValueAtTime(vol || 0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
   o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
 }
-let hornT = 0, bumpT = 0;
+let hornT = 0, bumpT = 0, bounceT = 0;
 function bump() { if (bumpT <= 0) { beep(110, 0.18, 'square', 0.16, 50); bumpT = 0.3; } }
 
 // ================================================================
@@ -633,12 +656,12 @@ let wakeLock = null;
 
 function startGame(m, fromTouch) {
   mode = m; state = 'play'; started = false; time = 0;
-  car.v = 0; car.st = 0; car.h = 0;
+  car.v = 0; car.st = 0; car.h = 0; bounceT = 0; zoneP = null; waitI.ok = false; waitI.t = 0; redT = 0;
   if (m === 'town') { car.x = -RH / 2; car.y = G / 2; } else { car.x = 0; car.y = 0; }
   traffic = []; parts = []; skids = []; collected = new Set(); starCount = 0; $('starN').textContent = '0';
   $('menu').classList.add('hide'); document.body.classList.add('play'); document.body.classList.remove('started');
   initAudio();
-  if (fromTouch) { try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el).catch(() => {}); } catch (e) {} }
+  if (fromTouch) { try { const el = document.documentElement, f = el.requestFullscreen || el.webkitRequestFullscreen; if (f) { const r = f.call(el); if (r && r.catch) r.catch(() => {}); } } catch (e) {} }
   try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {}); } catch (e) {}
   layoutGuide();
 }
@@ -661,7 +684,7 @@ function view() {
 }
 function layoutGuide() {
   const v = view(), len = CAR_L * v.S;
-  $('guide').style.top = Math.max(50, v.cy - len / 2 - 78) + 'px';
+  $('guide').style.top = Math.max(50, v.cy - len / 2 - 150) + 'px';
 }
 function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1600); }
 
@@ -695,19 +718,20 @@ function update(dt) {
     else { acc = 0; brk = 0; }
   }
   if (opt.auto && started && brk < 0.2) acc = 1;
+  bounceT -= dt; if (bounceT > 0) acc = 0;   // はね返りの間は少し はなれる（ハンドルで向きを変えられる）
   if (inp.horn && hornT <= 0) { beep(420, 0.32, 'square', 0.12); beep(530, 0.32, 'square', 0.12); hornT = 0.4; }
 
   const town = mode === 'town';
   const fx0 = Math.sin(car.h), fy0 = -Math.cos(car.h);
   const surf = town ? surfaceAt(car.x + fx0 * AX, car.y + fy0 * AX) : 'road';
-  const vmax = town ? (surf === 'grass' ? 4 : surf === 'walk' ? 7 : 9) : 11;
+  const vmax = town ? (surf === 'grass' ? 2.8 : surf === 'walk' ? 4.5 : 6) : 7.5;
 
   // アクセル・ブレーキ
   if (brk > 0.05) {
     if (car.v > 0.05) car.v = Math.max(0, car.v - brk * 13 * dt);
     else if (town) car.v -= brk * 4 * dt; else car.v = 0;
   } else if (acc > 0.05) {
-    car.v += (car.v < 0 ? 14 : acc * 6) * dt;
+    car.v += (car.v < 0 ? 14 : acc * 4.5) * dt;
   } else {
     car.v -= Math.sign(car.v) * Math.min(Math.abs(car.v), 2.5 * dt);
   }
@@ -717,7 +741,7 @@ function update(dt) {
   // ハンドル
   car.st += (inp.steer - car.st) * Math.min(1, dt * 8);
   const ox = car.x, oy = car.y, oh = car.h;
-  if (town) car.h += car.v * car.st * 0.24 / (1 + Math.abs(car.v) / 14) * dt;
+  if (town) car.h += (bounceT > 0 ? Math.abs(car.v) : car.v) * car.st * 0.24 / (1 + Math.abs(car.v) / 14) * dt;   // はね返り中は後ろへ下がっても同じ向きに回る
   else car.h += (car.st * 0.24 * Math.min(1, car.v / 3) - car.h) * Math.min(1, dt * 5);
   car.x += Math.sin(car.h) * car.v * dt; car.y -= Math.cos(car.h) * car.v * dt;
 
@@ -725,11 +749,11 @@ function update(dt) {
     if (carPoints(car.x, car.y, car.h).some(p => solidAt(p[0], p[1]))) {
       car.x = ox; car.y = oy; car.h = oh;
       if (Math.abs(car.v) > 1) bump();
-      car.v = -car.v * 0.3;
+      car.v = (car.v >= 0 ? -1 : 1) * Math.max(2.4, Math.abs(car.v) * 0.3); bounceT = 0.45;
     }
   } else {
     const lim = HW_RAIL - 1.05;
-    if (Math.abs(car.x) > lim) { car.x = Math.sign(car.x) * lim; car.h *= 0.8; car.v *= (1 - 0.6 * dt); if (car.v > 3) spark(); }
+    if (Math.abs(car.x) > lim) { car.x = Math.sign(car.x) * lim; car.h *= 0.8; car.v *= (1 - 0.6 * dt); if (car.v > 2) spark(); }
     const ccx = car.x + Math.sin(car.h) * AX, ccy = car.y - Math.cos(car.h) * AX;
     updateTraffic(dt, ccx, ccy);
     for (const t of traffic) {
@@ -756,14 +780,15 @@ function update(dt) {
     }
   };
   if (town) townStars(ccx, ccy, 4, pick); else highwayStars(ccy, 4, pick);
+  if (town) trafficRules(dt, ccx, ccy, fx, fy);
 
   // けむり・土ぼこり・タイヤのあと
   const rx = Math.cos(car.h), ry = Math.sin(car.h), sp = Math.abs(car.v);
-  if (sp > 1 && Math.random() < dt * (surf === 'grass' ? 30 : acc > 0.5 && sp < 6 ? 14 : 3)) {
+  if (sp > 1 && Math.random() < dt * (surf === 'grass' ? 30 : acc > 0.5 && sp < 4 ? 14 : 3)) {
     const s = Math.random() < .5 ? -1 : 1;
     parts.push({ x: car.x + rx * 0.7 * s - fx * 0.9, y: car.y + ry * 0.7 * s - fy * 0.9, vx: -fx * 1.2 + (Math.random() - .5), vy: -fy * 1.2 + (Math.random() - .5), life: 0.6, max: 0.6, r: 0.15, col: surf === 'grass' ? '150,120,70' : '235,235,235' });
   }
-  if (town && sp > 6.5 && Math.abs(car.st) > 0.9 && surf !== 'grass') {
+  if (town && sp > 4.2 && Math.abs(car.st) > 0.9 && surf !== 'grass') {
     for (const s of [-1, 1]) skids.push({ x: car.x + rx * 0.8 * s, y: car.y + ry * 0.8 * s, px: ox + Math.cos(oh) * 0.8 * s, py: oy + Math.sin(oh) * 0.8 * s, life: 6 });
     if (skids.length > 400) skids.splice(0, skids.length - 400);
   }
@@ -779,6 +804,34 @@ function update(dt) {
     engFilt.frequency.value = 300 + sp * 60;
     engGain.gain.value = on ? 0.025 + Math.min(0.045, sp * 0.004) + (acc > 0.1 ? 0.012 : 0) : 0;
   }
+}
+let zoneP = null, waitI = { i: 0, j: 0, t: 0, ok: false }, redT = 0;
+function awardStar(sx, sy, msg) {
+  starCount++; $('starN').textContent = starCount;
+  beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
+  for (let n = 0; n < 10; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.6, max: 0.6, r: 0.18, col: '255,216,46' });
+  toast(msg);
+}
+// 信号のルール: 赤で止まって待って青で進むと⭐。赤で進んでも罰はなく、おしらせだけ。
+function trafficRules(dt, cx, cy, fx, fy) {
+  redT -= dt;
+  const ii = Math.round(cx / G), jj = Math.round(cy / G), lx = cx - ii * G, ly = cy - jj * G;
+  const inside = Math.abs(lx) < RH && Math.abs(ly) < RH;
+  if (inside && zoneP && !zoneP.inside && zoneP.i === ii && zoneP.j === jj) {
+    const s = sigState(ii, jj, Math.abs(zoneP.lx) > Math.abs(zoneP.ly) ? 1 : 0);
+    if (waitI.ok && waitI.i === ii && waitI.j === jj && s === 'green') awardStar(cx, cy, '🚦 まてたね！ えらい！ ⭐');
+    else if (s === 'red' && car.v > 1 && redT <= 0) { toast('🚦 あかだよ！ とまろうね'); beep(300, 0.25, 'square', 0.1, 200); redT = 3; }
+    waitI.ok = false; waitI.t = 0;
+  }
+  zoneP = { i: ii, j: jj, lx, ly, inside };
+  let waiting = false;
+  if (!inside && Math.abs(car.v) < 0.4) {
+    const ax = Math.abs(lx) < RH && Math.abs(ly) > RH && Math.abs(ly) < RH + 7 ? 0 : Math.abs(ly) < RH && Math.abs(lx) > RH && Math.abs(lx) < RH + 7 ? 1 : -1;
+    const d = Math.hypot(lx, ly) || 1;
+    if (ax >= 0 && (fx * -lx + fy * -ly) / d > 0.6 && sigState(ii, jj, ax) === 'red') waiting = true;
+  }
+  if (waiting) { waitI.t += dt; if (waitI.t > 0.8) { waitI.ok = true; waitI.i = ii; waitI.j = jj; } }
+  else { waitI.t = 0; if (Math.hypot(lx, ly) > RH + 9) waitI.ok = false; }
 }
 function spark() {
   if (Math.random() < .4) parts.push({ x: car.x + Math.sign(car.x) * 0.95, y: car.y - AX + (Math.random() - .5) * 3, vx: -Math.sign(car.x) * 2, vy: 4 + Math.random() * 3, life: 0.25, max: 0.25, r: 0.1, col: '255,200,80' });
@@ -868,7 +921,7 @@ $('szp').addEventListener('click', () => resizeCar(6));
 // 走行中はスクロールやズームをさせない
 document.addEventListener('touchmove', e => { if (state === 'play') e.preventDefault(); }, { passive: false });
 document.addEventListener('contextmenu', e => e.preventDefault());
-document.addEventListener('pointerdown', () => { if (state === 'play') initAudio(); });
+document.addEventListener('pointerdown', () => initAudio());
 window.addEventListener('gamepadconnected', () => {});   // 一部ブラウザはこのリスナーがないとパッドを報告しない
 
 resize();
