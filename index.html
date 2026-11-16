@@ -2,1850 +2,878 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<title>🎨 ColorCar Race</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@800&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#2b2f36">
+<title>ミニカードライブ</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --bg-coloring: #FFF8E7;
-  --sky-blue: #87CEEB;
-  --grass-green: #5CBF47;
-  --asphalt: #6B6B6B;
-  --btn-start: #FF6B35;
-  --btn-start-shadow: #CC4400;
-  --btn-again: #44AA44;
-  --btn-again-shadow: #2d7a2d;
-  --text-white: #FFFFFF;
-  --hud-bg: rgba(0,0,0,0.45);
-}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #2b2f36; }
 body {
-  font-family: 'M PLUS Rounded 1c', 'Rounded Mplus 1c', sans-serif;
-  font-weight: 800;
-  background: var(--bg-coloring);
-  overflow: hidden;
-  width: 100vw; height: 100vh;
-  display: flex; align-items: center; justify-content: center;
+  font-family: "Hiragino Maru Gothic ProN", "Rounded Mplus 1c", "Yu Gothic", "Meiryo", system-ui, sans-serif;
+  font-weight: 700; color: #fff;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  overscroll-behavior: none;
 }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
 
-/* ─── COLORING SCREEN ─── */
-#coloring-screen {
+/* ─── メニュー ─── */
+#menu {
+  position: fixed; inset: 0; z-index: 10;
+  background: rgba(24, 28, 36, .86);
   display: flex; flex-direction: column; align-items: center;
-  gap: 14px; padding: 16px;
-  max-width: 600px; width: 100%;
-  max-height: 100vh; overflow-y: auto;   /* 画面に収まらない時はスクロール */
+  gap: 12px; padding: max(18px, env(safe-area-inset-top)) 16px 20px;
+  overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
-#coloringCanvas, #coloring-canvas-wrap { max-width: 100%; }
-/* 縦が低い端末向けにコンパクト化 */
-@media (max-height: 760px) {
-  #coloring-screen { gap: 8px; padding: 8px; }
-  #coloring-screen h1 { font-size: clamp(15px, 4vw, 22px); }
-  #version { font-size: 11px; }
-  #coloring-canvas-wrap { max-width: 78vmin; }
-  .color-swatch { width: 40px; height: 40px; }
-  .btn-big { min-height: 58px; font-size: 24px; padding: 10px 30px; }
-  .vehicle-btn { font-size: 15px; padding: 6px 10px; }
+#menu.hide { display: none; }
+#menu h1 { font-size: 28px; letter-spacing: .04em; margin-top: 6px; text-align: center; }
+#menu .lead { font-size: 14px; line-height: 1.6; text-align: center; opacity: .9; max-width: 420px; }
+#pad {
+  font-size: 14px; padding: 8px 14px; border-radius: 999px;
+  background: #3a4150; border: 2px solid #586175; text-align: center;
 }
-#coloring-screen h1 {
-  font-size: clamp(20px, 5vw, 32px);
-  color: #FF6B35;
-  text-shadow: 2px 2px 0 #CC4400;
+#pad.ok { background: #1f6f43; border-color: #37c97c; }
+.modes { display: flex; gap: 12px; width: 100%; max-width: 460px; }
+.mode {
+  flex: 1; font: inherit; color: #fff; cursor: pointer;
+  background: #39424f; border: 4px solid transparent; border-radius: 20px;
+  padding: 14px 8px 12px; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  box-shadow: 0 6px 0 #1d222b;
 }
-#coloring-canvas-wrap {
-  border: 5px solid #FF6B35;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 6px 0 #CC4400;
-  cursor: crosshair;
-  background: #fff;
+.mode .ico { font-size: 44px; line-height: 1.1; }
+.mode b { font-size: 17px; }
+.mode small { font-size: 11px; opacity: .8; font-weight: 400; }
+.mode.sel { border-color: #ffd23f; background: #46546a; }
+.mode:active { transform: translateY(4px); box-shadow: 0 2px 0 #1d222b; }
+.opts { display: flex; flex-direction: column; gap: 8px; width: 100%; max-width: 460px; }
+.opt {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  background: #2f3642; border-radius: 14px; padding: 10px 14px; font-size: 14px; cursor: pointer;
 }
-#coloringCanvas { display: block; width: 100%; height: auto; }
-#version {
-  font-size: 13px; color: #B08050; opacity: 0.8;
-}
-#vehiclePicker {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 7px;
-  max-width: 100%; overflow: visible; padding: 2px;
-}
-.vehicle-btn { flex: 0 0 auto; white-space: nowrap; }
-.vehicle-btn {
-  font-family: 'M PLUS Rounded 1c', sans-serif;
-  font-size: 15px; font-weight: 800;
-  padding: 6px 11px; border-radius: 14px; cursor: pointer;
-  border: 3px solid #FFB088; background: #fff; color: #CC4400;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.15);
-  user-select: none; -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s;
-}
-.vehicle-btn:hover { transform: scale(1.06); }
-.vehicle-btn.selected {
-  background: #FF6B35; color: #fff; border-color: #CC4400;
-}
-#palette {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 10px;
-}
-.color-swatch {
-  width: 52px; height: 52px; border-radius: 50%;
-  border: 4px solid transparent;
-  cursor: pointer;
-  box-shadow: 0 4px 0 rgba(0,0,0,0.25);
-  transition: transform 0.1s, box-shadow 0.1s;
-}
-.color-swatch:hover { transform: scale(1.15); }
-.color-swatch.selected {
-  border-color: #333;
-  transform: scale(1.2);
-  box-shadow: 0 2px 0 rgba(0,0,0,0.25);
-}
-.btn-big {
-  font-family: 'M PLUS Rounded 1c', sans-serif;
-  font-size: 28px; font-weight: 800;
-  min-width: 200px; min-height: 70px;
-  border: none; border-radius: 24px;
-  padding: 14px 40px; cursor: pointer;
-  transition: transform 0.1s, box-shadow 0.1s;
-  user-select: none;
-  -webkit-tap-highlight-color: transparent;
-  color: #fff;
-}
-#startBtn {
-  background: var(--btn-start);
-  box-shadow: 0 7px 0 var(--btn-start-shadow);
-}
-#startBtn:active {
-  transform: translateY(4px);
-  box-shadow: 0 3px 0 var(--btn-start-shadow);
-}
-#againBtn {
-  background: var(--btn-again);
-  box-shadow: 0 7px 0 var(--btn-again-shadow);
-}
-#againBtn:active {
-  transform: translateY(4px);
-  box-shadow: 0 3px 0 var(--btn-again-shadow);
-}
+.opt span small { display: block; font-size: 11px; font-weight: 400; opacity: .75; }
+.sw { width: 50px; height: 28px; border-radius: 14px; background: #586175; position: relative; flex: none; transition: background .15s; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; transition: left .15s; }
+.opt.on .sw { background: #37c97c; }
+.opt.on .sw::after { left: 25px; }
+details { width: 100%; max-width: 460px; background: #2f3642; border-radius: 14px; padding: 10px 14px; font-size: 13px; }
+details summary { cursor: pointer; font-size: 14px; }
+details ol, details ul { margin: 8px 0 4px 20px; font-weight: 400; line-height: 1.7; }
+details h3 { font-size: 13px; margin-top: 10px; color: #ffd23f; }
+details table { border-collapse: collapse; margin-top: 6px; font-weight: 400; width: 100%; }
+details td { padding: 3px 6px; border-bottom: 1px solid #454e5e; }
+details td:first-child { white-space: nowrap; color: #bfe3ff; }
+#ver { font-size: 11px; opacity: .5; font-weight: 400; }
 
-/* ─── RACE SCREEN ─── */
-#race-screen {
-  display: none; position: relative;
-  width: 100vw; height: 100vh;
+/* ─── プレイ中のHUD ─── */
+.hud { position: fixed; z-index: 5; display: none; }
+body.play .hud { display: block; }
+#stars {
+  top: max(10px, env(safe-area-inset-top)); left: 10px;
+  background: rgba(0,0,0,.45); border-radius: 999px; padding: 6px 14px; font-size: 18px;
 }
-#race-screen canvas { display: block; }
-#hud {
-  position: absolute; top: 16px; left: 50%; transform: translateX(-50%);
-  background: var(--hud-bg); color: #fff; border-radius: 16px;
-  padding: 10px 24px; font-size: clamp(16px, 3.5vw, 26px);
-  display: flex; gap: 24px; align-items: center;
-  white-space: nowrap; pointer-events: none;
+#btnMenu {
+  top: max(10px, env(safe-area-inset-top)); right: 10px;
+  font: inherit; font-size: 12px; color: #fff; border: 0; border-radius: 999px;
+  background: rgba(0,0,0,.45); padding: 9px 14px; overflow: hidden;
 }
-#countdown {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  font-size: clamp(60px, 15vw, 120px); color: #fff;
-  text-shadow: 0 0 20px rgba(0,0,0,0.8), 4px 4px 0 #FF6B35;
-  pointer-events: none; display: none;
-  animation: countPop 0.3s ease-out;
+#btnMenu i { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: rgba(255,210,63,.55); }
+#btnMenu.hold i { width: 100%; transition: width .7s linear; }
+#btnMenu span { position: relative; }
+#guide {
+  left: 0; right: 0; text-align: center; pointer-events: none;
+  font-size: 19px; line-height: 1.5; text-shadow: 0 2px 6px rgba(0,0,0,.8);
 }
-@keyframes countPop {
-  from { transform: translate(-50%,-50%) scale(1.8); opacity: 0; }
-  to   { transform: translate(-50%,-50%) scale(1);   opacity: 1; }
+#guide small { font-size: 13px; display: block; }
+#sizer { left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom)); text-align: center; }
+#sizer button {
+  font: inherit; font-size: 15px; color: #fff; border: 0; border-radius: 14px;
+  background: rgba(0,0,0,.55); padding: 12px 16px; margin: 0 6px;
 }
-#goalScreen {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
-  background: rgba(0,0,0,0.82); color: #fff; border-radius: 28px;
-  padding: 40px 60px; text-align: center; display: none; flex-direction: column;
-  align-items: center; gap: 20px;
+#sizer div { font-size: 11px; font-weight: 400; margin-bottom: 6px; text-shadow: 0 1px 4px #000; }
+body.started #guide, body.started #sizer { display: none; }
+#toast {
+  position: fixed; z-index: 6; left: 50%; top: 16%; transform: translate(-50%, 0) scale(.6);
+  background: #ffd23f; color: #3a2a00; border-radius: 999px; padding: 10px 22px; font-size: 20px;
+  opacity: 0; pointer-events: none; transition: opacity .25s, transform .25s; white-space: nowrap;
 }
-#goalScreen h1 { font-size: clamp(36px, 8vw, 64px); color: #FFD700; }
-#goalScreen p  { font-size: clamp(18px, 4vw, 28px); }
-
-/* Touch controls */
-#touchLeft, #touchRight {
-  position: absolute; bottom: 0; width: 50%; height: 45%;
-  display: none; align-items: center; justify-content: center;
-  font-size: 60px; opacity: 0.25; pointer-events: auto;
-  user-select: none; -webkit-tap-highlight-color: transparent;
-}
-#touchLeft  { left: 0; }
-#touchRight { right: 0; }
-
-/* Speedometer (右下・道路が透けて見える半透明) */
-#speedo {
-  position: absolute; right: 18px; bottom: 18px;
-  width: 110px; height: 110px; border-radius: 50%;
-  background: rgba(0,0,0,0.28);
-  border: 3px solid rgba(255,255,255,0.55);
-  display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  color: #fff; pointer-events: none;
-  font-family: 'M PLUS Rounded 1c', sans-serif; font-weight: 800;
-  text-shadow: 0 1px 3px rgba(0,0,0,0.6);
-}
-#speedoNum { font-size: 40px; line-height: 1; }
-#speedoUnit { font-size: 15px; opacity: 0.85; }
-@media (max-width: 600px) {
-  #speedo { width: 84px; height: 84px; right: 12px; bottom: 12px; }
-  #speedoNum { font-size: 30px; }
-  #speedoUnit { font-size: 12px; }
-}
-
-/* Confetti */
-.confetti {
-  position: fixed; top: -10px; width: 12px; height: 12px;
-  border-radius: 2px; pointer-events: none;
-  animation: fall linear forwards;
-}
-@keyframes fall {
-  to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
-}
+#toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
 </style>
 </head>
 <body>
+<canvas id="c"></canvas>
 
-<!-- ─── COLORING SCREEN ─── -->
-<div id="coloring-screen">
-  <h1>🎨 じぶんの くるまを ぬろう！</h1>
-  <div id="version">v16 ・ くるま11しゅるい 🚗🏎️🚚🚜🚌🚒🚃🚄🏍️🚑🚓</div>
-  <div id="vehiclePicker"></div>
-  <div id="coloring-canvas-wrap">
-    <canvas id="coloringCanvas" width="500" height="300"></canvas>
+<div id="menu">
+  <h1>🚗 ミニカードライブ</h1>
+  <p class="lead">スマホのうえに ミニカーを おいて、<br>コントローラーで うんてんしよう！</p>
+  <div id="pad">🎮 コントローラーの ボタンを 1かい おしてね</div>
+  <div class="modes">
+    <button class="mode sel" data-mode="town"><span class="ico">🏘️</span><b>まちを ドライブ</b><small>すきな みちを じゆうに</small></button>
+    <button class="mode" data-mode="highway"><span class="ico">🛣️</span><b>こうそくどうろ</b><small>くるまを よけて びゅーん</small></button>
   </div>
-  <div id="palette"></div>
-  <button class="btn-big" id="startBtn">スタート！🏎️</button>
+  <div class="opts">
+    <div class="opt" data-opt="auto"><span>じどうで はしる<small>ハンドルだけで あそべる（ちいさい子むけ）</small></span><i class="sw"></i></div>
+    <div class="opt" data-opt="virtual"><span>がめんに くるまを だす<small>ミニカーが ないとき用</small></span><i class="sw"></i></div>
+    <div class="opt" data-opt="sound"><span>おと<small>エンジン・クラクション</small></span><i class="sw"></i></div>
+  </div>
+  <details>
+    <summary>📖 あそびかた・つなぎかた（おとな向け）</summary>
+    <h3>じゅんび</h3>
+    <ol>
+      <li>スマホの「設定 → Bluetooth」を開き、Switchのコントローラーのシンクロボタン（Joy-Conは側面のレール部、Proコンは上面の小さい丸ボタン）を長押ししてペアリングします。</li>
+      <li>このページに戻り、コントローラーのボタンを1回押します（上の表示が緑になります）。</li>
+      <li>コースを選び、画面の白い枠にミニカーを置きます。枠の大きさは L / R ボタンか画面下のボタンで合わせられます。</li>
+    </ol>
+    <h3>そうさ</h3>
+    <table>
+      <tr><td>左スティック / 十字 ←→</td><td>ハンドル（画面がうごきます）</td></tr>
+      <tr><td>A・B・ZR / スティック↑</td><td>アクセル</td></tr>
+      <tr><td>Y・ZL / スティック↓</td><td>ブレーキ・バック</td></tr>
+      <tr><td>X</td><td>クラクション</td></tr>
+      <tr><td>L / R</td><td>ミニカーの枠サイズ調整</td></tr>
+      <tr><td>＋ / −</td><td>メニューにもどる</td></tr>
+    </table>
+    <h3>ちゅうい</h3>
+    <ul>
+      <li>画面にキズがつかないよう、保護フィルムを貼ったスマホで、そっと置いてください。</li>
+      <li>スマホは平らな机の上に置いてください。金属のミニカーが画面に反応することがあるため、走行中は画面タッチを無効にしています（メニューは右上を長押し）。</li>
+      <li>コントローラーがない場合はキーボード（矢印キー / スペース）でも動かせます。</li>
+    </ul>
+  </details>
+  <div id="ver">v1 ・ ミニカードライブ</div>
 </div>
 
-<!-- ─── RACE SCREEN ─── -->
-<div id="race-screen">
-  <div id="hud">
-    <span>🏁 ラップ <b id="lapNum">1</b>/3</span>
-    <span>⏱ <b id="timer">0:00</b></span>
-    <span>🥇 <b id="rank">1</b>位</span>
-  </div>
-  <div id="countdown"></div>
-  <div id="goalScreen">
-    <h1>🎉 ゴール！</h1>
-    <p id="finalTime">タイム: 0:00</p>
-    <button class="btn-big" id="againBtn">もういちど！🎨</button>
-  </div>
-  <div id="touchLeft">◀</div>
-  <div id="touchRight">▶</div>
-  <div id="speedo">
-    <div id="speedoNum">0</div>
-    <div id="speedoUnit">km/h</div>
-  </div>
-</div>
+<div id="stars" class="hud">⭐ <span id="starN">0</span></div>
+<button id="btnMenu" class="hud"><i></i><span>メニュー（ながおし）</span></button>
+<div id="guide" class="hud">ここに ミニカーを おいてね<small>Aボタン か スティック↑ で しゅっぱつ！</small></div>
+<div id="sizer" class="hud"><div>わくを ミニカーの おおきさに あわせてね（L / R ボタンでも OK）</div><button id="szm">− ちいさく</button><button id="szp">＋ おおきく</button></div>
+<div id="toast"></div>
 
 <script>
-// ════════════════════════════════════════════════════
-//  AUDIO
-// ════════════════════════════════════════════════════
-let AC = null;
-let bgmTimeout = null;
+'use strict';
+/* ================================================================
+   ミニカードライブ
+   スマホ画面の上に置いたミニカーは動かさず、地面（世界）のほうを
+   動かして「走っているように見せる」トップビューのドライブゲーム。
+   ================================================================ */
 
-function initAudio() {
-  if (AC) return;
-  AC = new (window.AudioContext || window.webkitAudioContext)();
+// ─── 基本設定（単位はおよそメートル）───
+const CAR_W = 1.8, CAR_L = 4.2;   // ミニカーの大きさ
+const AX = 1.3;                    // 後輪の軸 → 車の中心までの距離（旋回の中心は後輪）
+const G = 20;                      // まち: 道路の間隔
+const RH = 2.6;                    // まち: 道路の半分の幅（1車線 = 2.6）
+const SW = 0.9;                    // 歩道の幅
+const HW_LANE = 2.5, HW_HALF = 3.75, HW_RAIL = 4.6;  // こうそく: 3車線
+const COLORS = ['#e8483f', '#3f7fe8', '#f2b632', '#39b36b', '#f08a3c', '#8a5bd6', '#f2f2f2', '#2b2f36', '#3cc4c9', '#f277a8'];
+
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+let W = 0, H = 0, DPR = 1;
+
+// ─── 保存される設定 ───
+const opt = { carW: 0, auto: false, virtual: false, sound: true };
+try { Object.assign(opt, JSON.parse(localStorage.getItem('minicar-drive') || '{}')); } catch (e) {}
+function saveOpt() { try { localStorage.setItem('minicar-drive', JSON.stringify(opt)); } catch (e) {} }
+
+function resize() {
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  if (!opt.carW) opt.carW = Math.min(175, Math.min(W, H) * 0.55);
+  layoutGuide();
+}
+window.addEventListener('resize', resize);
+window.addEventListener('orientationchange', () => setTimeout(resize, 200));
+
+// ─── 乱数 ───
+function hash(a, b, c) {
+  let h = Math.imul(a | 0, 374761393) ^ Math.imul(b | 0, 668265263) ^ Math.imul((c | 0) + 1, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177); h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+}
+function rng(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+
+// ─── 地面のテクスチャ（細かい模様があると「動いている感じ」が出る）───
+const pat = {};
+function makePattern(base, paint) {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'); g.fillStyle = base; g.fillRect(0, 0, 256, 256);
+  paint(g, rng(base.length * 7919 + base.charCodeAt(1) * 31 + base.charCodeAt(3)));
+  const p = ctx.createPattern(c, 'repeat');
+  try { p.setTransform({ a: 1 / 64, b: 0, c: 0, d: 1 / 64, e: 0, f: 0 }); } catch (e) {}
+  return p;
+}
+function buildPatterns() {
+  pat.asphalt = makePattern('#5b6068', (g, r) => {
+    for (let i = 0; i < 1400; i++) {
+      g.fillStyle = r() < .5 ? 'rgba(255,255,255,' + (0.05 + r() * 0.12) + ')' : 'rgba(0,0,0,' + (0.06 + r() * 0.14) + ')';
+      const s = 1 + r() * 2.2; g.fillRect(r() * 256, r() * 256, s, s);
+    }
+  });
+  pat.lot = makePattern('#767c85', (g, r) => {
+    for (let i = 0; i < 1000; i++) {
+      g.fillStyle = r() < .5 ? 'rgba(255,255,255,' + (0.05 + r() * 0.1) + ')' : 'rgba(0,0,0,' + (0.05 + r() * 0.1) + ')';
+      const s = 1 + r() * 2; g.fillRect(r() * 256, r() * 256, s, s);
+    }
+  });
+  pat.grass = makePattern('#79c653', (g, r) => {
+    g.lineCap = 'round';
+    for (let i = 0; i < 520; i++) {
+      g.strokeStyle = r() < .5 ? 'rgba(40,120,40,' + (0.18 + r() * 0.2) + ')' : 'rgba(210,255,150,' + (0.15 + r() * 0.2) + ')';
+      g.lineWidth = 1.5 + r() * 1.5;
+      const x = r() * 256, y = r() * 256; g.beginPath(); g.moveTo(x, y); g.lineTo(x + (r() - .5) * 5, y - 3 - r() * 5); g.stroke();
+    }
+  });
+  pat.walk = makePattern('#cfc9ba', (g, r) => {
+    g.strokeStyle = 'rgba(0,0,0,.13)'; g.lineWidth = 2;
+    for (let i = 0; i <= 256; i += 32) { g.beginPath(); g.moveTo(i, 0); g.lineTo(i, 256); g.moveTo(0, i); g.lineTo(256, i); g.stroke(); }
+    for (let i = 0; i < 300; i++) { g.fillStyle = 'rgba(0,0,0,' + (0.03 + r() * 0.06) + ')'; g.fillRect(r() * 256, r() * 256, 2, 2); }
+  });
 }
 
-function startBGM() {
-  if (!AC) return;
-  if (AC.state === 'suspended') AC.resume();
-  const BPM = 140;
-  const notes = [
-    [523,1],[659,1],[784,1],[880,2],
-    [784,1],[659,1],[523,2],
-    [440,1],[523,1],[659,1],[784,2],
-    [659,1],[523,1],[440,4],
-  ];
-  let t = AC.currentTime + 0.1;
-  const beat = 60 / BPM;
-  function playLoop() {
-    notes.forEach(([freq, dur]) => {
-      const osc = AC.createOscillator();
-      const gain = AC.createGain();
-      osc.type = 'square';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.10, t);
-      gain.gain.exponentialRampToValueAtTime(0.001, t + beat * dur * 0.85);
-      osc.connect(gain); gain.connect(AC.destination);
-      osc.start(t); osc.stop(t + beat * dur);
-      t += beat * dur;
-    });
-    const delay = (t - AC.currentTime - 0.5) * 1000;
-    bgmTimeout = setTimeout(playLoop, Math.max(delay, 100));
-  }
-  playLoop();
+// ─── 図形ヘルパー ───
+function rr(c, x, y, w, h, r) {
+  c.beginPath(); c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath();
+}
+function circle(c, x, y, r) { c.beginPath(); c.arc(x, y, r, 0, 6.2832); }
+
+// 真上から見た車（原点が中心・上向き）
+function drawCarShape(c, col) {
+  c.fillStyle = 'rgba(0,0,0,.28)'; rr(c, -0.9 + 0.16, -2.1 + 0.2, 1.8, 4.2, 0.55); c.fill();
+  c.fillStyle = '#1c1c1c';
+  for (const sx of [-1, 1]) for (const sy of [-1.3, 1.25]) { rr(c, sx * 0.86 - 0.16, sy - 0.42, 0.32, 0.84, 0.1); c.fill(); }
+  c.fillStyle = col; rr(c, -0.9, -2.1, 1.8, 4.2, 0.55); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.16)'; rr(c, -0.62, -1.95, 1.24, 1.05, 0.3); c.fill();
+  c.fillStyle = 'rgba(0,0,0,.12)'; rr(c, -0.9, 1.3, 1.8, 0.8, 0.5); c.fill();
+  c.fillStyle = '#26323f';
+  c.beginPath(); c.moveTo(-0.7, -0.8); c.lineTo(0.7, -0.8); c.lineTo(0.6, -0.12); c.lineTo(-0.6, -0.12); c.closePath(); c.fill();
+  c.beginPath(); c.moveTo(-0.6, 1.1); c.lineTo(0.6, 1.1); c.lineTo(0.68, 1.6); c.lineTo(-0.68, 1.6); c.closePath(); c.fill();
+  c.fillRect(-0.78, -0.05, 0.1, 1.1); c.fillRect(0.68, -0.05, 0.1, 1.1);
+  c.fillStyle = col; rr(c, -0.6, -0.12, 1.2, 1.22, 0.14); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.22)'; rr(c, -0.6, -0.12, 1.2, 1.22, 0.14); c.fill();
+  c.fillStyle = '#fff6c4'; rr(c, -0.78, -2.08, 0.42, 0.2, 0.08); c.fill(); rr(c, 0.36, -2.08, 0.42, 0.2, 0.08); c.fill();
+  c.fillStyle = '#d2302a'; rr(c, -0.78, 1.9, 0.4, 0.17, 0.07); c.fill(); rr(c, 0.38, 1.9, 0.4, 0.17, 0.07); c.fill();
+}
+function drawTree(c, x, y, r) {
+  c.fillStyle = 'rgba(0,0,0,.22)'; circle(c, x + r * 0.22, y + r * 0.26, r); c.fill();
+  c.fillStyle = '#2f8f3e'; circle(c, x, y, r); c.fill();
+  c.fillStyle = '#44ab4f'; circle(c, x - r * 0.2, y - r * 0.22, r * 0.68); c.fill();
+  c.fillStyle = '#69c765'; circle(c, x - r * 0.34, y - r * 0.36, r * 0.34); c.fill();
+}
+function drawStar(c, x, y, r, t) {
+  c.save(); c.translate(x, y); c.rotate(t * 1.6); const s = 1 + Math.sin(t * 5) * 0.08; c.scale(s, s);
+  c.fillStyle = 'rgba(255,250,200,.28)'; circle(c, 0, 0, r * 1.3); c.fill();
+  c.beginPath();
+  for (let i = 0; i < 10; i++) { const a = i * 0.6283 - 1.5708, q = i % 2 ? r * 0.45 : r; c.lineTo(Math.cos(a) * q, Math.sin(a) * q); }
+  c.closePath(); c.fillStyle = '#ffd82e'; c.fill(); c.lineWidth = 0.08; c.strokeStyle = '#e69a00'; c.stroke();
+  c.restore();
 }
 
-function stopBGM() {
-  if (bgmTimeout) { clearTimeout(bgmTimeout); bgmTimeout = null; }
+// ================================================================
+//  まち（無限に続く碁盤の目のまち）
+// ================================================================
+const blocks = new Map();
+function getBlock(i, j) {
+  const k = i + ',' + j; let b = blocks.get(k);
+  if (!b) { b = genBlock(i, j); blocks.set(k, b); if (blocks.size > 90) blocks.delete(blocks.keys().next().value); }
+  return b;
 }
-
-function playSE(type) {
-  if (!AC) return;
-  if (AC.state === 'suspended') AC.resume();
-  const se = {
-    engine() {
-      const osc = AC.createOscillator(), gain = AC.createGain();
-      osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(80, AC.currentTime);
-      osc.frequency.linearRampToValueAtTime(160, AC.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.18, AC.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.4);
-      osc.connect(gain); gain.connect(AC.destination);
-      osc.start(); osc.stop(AC.currentTime + 0.4);
-    },
-    lap() {
-      [523,659,784,1047].forEach((f,i) => {
-        const osc = AC.createOscillator(), gain = AC.createGain();
-        osc.frequency.value = f;
-        gain.gain.setValueAtTime(0.2, AC.currentTime + i*0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + i*0.1 + 0.15);
-        osc.connect(gain); gain.connect(AC.destination);
-        osc.start(AC.currentTime + i*0.1);
-        osc.stop(AC.currentTime + i*0.1 + 0.2);
-      });
-    },
-    goal() {
-      const fanfare = [[523,.15],[659,.15],[784,.15],[1047,.4],[988,.15],[1047,.5]];
-      let t = AC.currentTime;
-      fanfare.forEach(([f, dur]) => {
-        const osc = AC.createOscillator(), gain = AC.createGain();
-        osc.frequency.value = f;
-        gain.gain.setValueAtTime(0.25, t);
-        gain.gain.exponentialRampToValueAtTime(0.001, t + dur * 0.9);
-        osc.connect(gain); gain.connect(AC.destination);
-        osc.start(t); osc.stop(t + dur);
-        t += dur;
-      });
-    },
-    count() {
-      const osc = AC.createOscillator(), gain = AC.createGain();
-      osc.frequency.value = 880;
-      gain.gain.setValueAtTime(0.3, AC.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.12);
-      osc.connect(gain); gain.connect(AC.destination);
-      osc.start(); osc.stop(AC.currentTime + 0.12);
-    },
-    go() {
-      [523,784].forEach((f,i) => {
-        const osc = AC.createOscillator(), gain = AC.createGain();
-        osc.frequency.value = f;
-        gain.gain.setValueAtTime(0.3, AC.currentTime + i*0.05);
-        gain.gain.exponentialRampToValueAtTime(0.001, AC.currentTime + 0.3);
-        osc.connect(gain); gain.connect(AC.destination);
-        osc.start(AC.currentTime + i*0.05);
-        osc.stop(AC.currentTime + 0.35);
-      });
-    },
+function genBlock(i, j) {
+  const r = rng((Math.imul(i, 73856093) ^ Math.imul(j, 19349663)) >>> 0);
+  const B = G - 2 * (RH + SW), x0 = i * G + RH + SW, y0 = j * G + RH + SW;
+  const b = { i, j, x0, y0, B, items: [], solids: [], type: '' };
+  const t = r();
+  b.type = t < .3 ? 'houses' : t < .55 ? 'park' : t < .72 ? 'lot' : t < .86 ? 'shop' : 'farm';
+  const it = b.items, so = b.solids;
+  const tree = (x, y, rad) => { it.push({ k: 'tree', x, y, r: rad }); so.push({ x, y, r: rad * 0.72 }); };
+  const parked = (x, y, up) => { it.push({ k: 'car', x, y, rot: up ? 0 : Math.PI, col: COLORS[(r() * COLORS.length) | 0] }); so.push({ x: x - 0.9, y: y - 2.1, w: 1.8, h: 4.2 }); };
+  const spaces = (y, d, p) => {
+    const n = 5, w = B / n; it.push({ k: 'spaces', x: x0, y, n, w, d });
+    for (let s = 0; s < n; s++) if (r() < p) parked(x0 + w * (s + .5), y + d / 2, r() < .5);
   };
-  se[type]?.();
-}
-
-// ════════════════════════════════════════════════════
-//  COLORING
-// ════════════════════════════════════════════════════
-const PALETTE = [
-  { hex: '#FF3333', label: 'あか' },
-  { hex: '#FF8800', label: 'オレンジ' },
-  { hex: '#FFE000', label: 'きいろ' },
-  { hex: '#33CC33', label: 'みどり' },
-  { hex: '#3366FF', label: 'あお' },
-  { hex: '#9933CC', label: 'むらさき' },
-  { hex: '#FF69B4', label: 'ピンク' },
-  { hex: '#FFFFFF', label: 'しろ' },
-  { hex: '#AAAAAA', label: 'グレー' },
-  { hex: '#AA6600', label: 'ちゃいろ' },
-  { hex: '#00DDDD', label: 'みずいろ' },
-  { hex: '#111111', label: 'くろ' },
-];
-
-let selectedColor = PALETTE[0].hex;
-const coloringCanvas = document.getElementById('coloringCanvas');
-const cCtx = coloringCanvas.getContext('2d');
-
-function hexToRGB(hex) {
-  const n = parseInt(hex.replace('#',''), 16);
-  return [(n>>16)&255, (n>>8)&255, n&255];
-}
-
-function roundRect(ctx, x, y, w, h, r) {
-  ctx.beginPath();
-  ctx.moveTo(x+r, y);
-  ctx.lineTo(x+w-r, y);
-  ctx.quadraticCurveTo(x+w, y, x+w, y+r);
-  ctx.lineTo(x+w, y+h-r);
-  ctx.quadraticCurveTo(x+w, y+h, x+w-r, y+h);
-  ctx.lineTo(x+r, y+h);
-  ctx.quadraticCurveTo(x, y+h, x, y+h-r);
-  ctx.lineTo(x, y+r);
-  ctx.quadraticCurveTo(x, y, x+r, y);
-  ctx.closePath();
-}
-
-// ─── Vehicle types (働く車) ───
-const VEHICLES = [
-  { id: 'car',       label: '🚗 くるま' },
-  { id: 'racecar',   label: '🏎️ レースカー' },
-  { id: 'truck',     label: '🚚 トラック' },
-  { id: 'bulldozer', label: '🚜 ブルドーザー' },
-  { id: 'bus',       label: '🚌 バス' },
-  { id: 'fire',      label: '🚒 しょうぼうしゃ' },
-  { id: 'train',     label: '🚃 でんしゃ' },
-  { id: 'shinkansen',label: '🚄 しんかんせん' },
-  { id: 'bike',      label: '🏍️ バイク' },
-  { id: 'ambulance', label: '🚑 きゅうきゅうしゃ' },
-  { id: 'police',    label: '🚓 パトカー' },
-];
-let currentVehicle = 'car';
-
-const BASE = '#CCCCCC'; // ぬり対象の初期色（メイン）
-
-function drawWheel(ctx, x, y, r) {
-  ctx.fillStyle = '#222222';
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#111'; ctx.lineWidth = 4;
-  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.stroke();
-  ctx.fillStyle = '#FFD700';
-  ctx.beginPath(); ctx.arc(x, y, r*0.42, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(x, y, r*0.42, 0, Math.PI*2); ctx.stroke();
-}
-function headlight(ctx, x, y) {
-  ctx.fillStyle = '#FFF6A0';
-  ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(x, y, 10, 0, Math.PI*2); ctx.stroke();
-}
-function fillStroke(ctx, color) {
-  ctx.fillStyle = color; ctx.fill();
-  ctx.strokeStyle = '#333333'; ctx.lineWidth = 5; ctx.stroke();
-}
-
-function drawCarTemplate() {
-  const ctx = cCtx;
-  ctx.clearRect(0, 0, 500, 300);
-  ({ car: drawCar, racecar: drawRacecar, truck: drawTruck,
-     bulldozer: drawBulldozer, bus: drawBus, fire: drawFire,
-     train: drawTrain, shinkansen: drawShinkansen, bike: drawBike,
-     ambulance: drawAmbulance, police: drawPolice }[currentVehicle])(ctx);
-}
-
-function drawCar(ctx) {
-  drawWheel(ctx, 150, 235, 38);
-  drawWheel(ctx, 355, 235, 38);
-  // body
-  roundRect(ctx, 70, 165, 360, 80, 34); fillStroke(ctx, BASE);
-  // cabin
-  ctx.beginPath();
-  ctx.moveTo(150, 170); ctx.lineTo(180, 95);
-  ctx.quadraticCurveTo(190, 80, 215, 80);
-  ctx.lineTo(310, 80);
-  ctx.quadraticCurveTo(335, 80, 345, 95);
-  ctx.lineTo(370, 170); ctx.closePath();
-  fillStroke(ctx, BASE);
-  // windows
-  ctx.fillStyle = '#8CC8F0';
-  ctx.beginPath();
-  ctx.moveTo(190,160); ctx.lineTo(210,105);
-  ctx.quadraticCurveTo(214,98,224,98); ctx.lineTo(248,98); ctx.lineTo(248,160); ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(262,160); ctx.lineTo(262,98); ctx.lineTo(300,98);
-  ctx.quadraticCurveTo(312,98,316,108); ctx.lineTo(330,160); ctx.closePath(); ctx.fill();
-  headlight(ctx, 420, 185);
-}
-
-function drawTruck(ctx) {
-  drawWheel(ctx, 130, 240, 36);
-  drawWheel(ctx, 360, 240, 36);
-  drawWheel(ctx, 405, 240, 36);
-  // 荷台（うしろの大きな箱）
-  roundRect(ctx, 60, 110, 230, 130, 16); fillStroke(ctx, BASE);
-  // 運転席（前）
-  roundRect(ctx, 300, 150, 140, 90, 18); fillStroke(ctx, BASE);
-  // 運転席の窓
-  ctx.fillStyle = '#8CC8F0';
-  roundRect(ctx, 360, 162, 70, 45, 10); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
-  roundRect(ctx, 360, 162, 70, 45, 10); ctx.stroke();
-  headlight(ctx, 432, 222);
-}
-
-function drawBus(ctx) {
-  drawWheel(ctx, 120, 240, 34);
-  drawWheel(ctx, 380, 240, 34);
-  // 長いボディ
-  roundRect(ctx, 45, 95, 410, 150, 30); fillStroke(ctx, BASE);
-  // 窓を横一列に
-  ctx.fillStyle = '#8CC8F0';
-  for (let i = 0; i < 4; i++) {
-    const wx = 75 + i * 80;
-    roundRect(ctx, wx, 120, 60, 55, 8); ctx.fill();
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
-    roundRect(ctx, wx, 120, 60, 55, 8); ctx.stroke();
-  }
-  // ドア
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
-  ctx.strokeRect(395, 150, 50, 90);
-  headlight(ctx, 440, 220);
-}
-
-function drawFire(ctx) {
-  drawWheel(ctx, 130, 240, 36);
-  drawWheel(ctx, 370, 240, 36);
-  // ボディ（消防車：低めで長い）
-  roundRect(ctx, 55, 150, 390, 95, 22); fillStroke(ctx, BASE);
-  // 運転席
-  roundRect(ctx, 330, 110, 115, 60, 16); fillStroke(ctx, BASE);
-  // 運転席の窓
-  ctx.fillStyle = '#8CC8F0';
-  roundRect(ctx, 350, 122, 75, 38, 8); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 3;
-  roundRect(ctx, 350, 122, 75, 38, 8); ctx.stroke();
-  // はしご（固定・グレー）
-  ctx.strokeStyle = '#888'; ctx.lineWidth = 6;
-  ctx.beginPath(); ctx.moveTo(70, 140); ctx.lineTo(300, 110); ctx.stroke();
-  ctx.lineWidth = 2;
-  for (let i = 0; i <= 8; i++) {
-    const t = i/8;
-    const x = 70 + t*230, y = 140 - t*30;
-    ctx.beginPath(); ctx.moveTo(x, y-7); ctx.lineTo(x, y+7); ctx.stroke();
-  }
-  // サイレン（固定・赤）
-  ctx.fillStyle = '#FF2222';
-  roundRect(ctx, 250, 138, 26, 16, 5); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
-  roundRect(ctx, 250, 138, 26, 16, 5); ctx.stroke();
-  headlight(ctx, 435, 222);
-}
-
-function drawRacecar(ctx) {
-  drawWheel(ctx, 135, 235, 38);
-  drawWheel(ctx, 360, 235, 38);
-  // 低くて長いボディ（body サンプル: 200,215）
-  ctx.beginPath();
-  ctx.moveTo(60, 225);
-  ctx.lineTo(80, 195);
-  ctx.lineTo(420, 195);
-  ctx.lineTo(450, 215);
-  ctx.lineTo(450, 235);
-  ctx.lineTo(60, 235);
-  ctx.closePath();
-  fillStroke(ctx, BASE);
-  // コックピット（roof サンプル: 250,150）
-  ctx.beginPath();
-  ctx.moveTo(190, 195);
-  ctx.lineTo(215, 140);
-  ctx.quadraticCurveTo(225, 128, 250, 128);
-  ctx.lineTo(285, 128);
-  ctx.quadraticCurveTo(300, 130, 305, 150);
-  ctx.lineTo(320, 195);
-  ctx.closePath();
-  fillStroke(ctx, BASE);
-  // ヘルメット風の窓（固定）
-  ctx.fillStyle = '#8CC8F0';
-  roundRect(ctx, 230, 140, 55, 48, 12); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 3; roundRect(ctx, 230, 140, 55, 48, 12); ctx.stroke();
-  // リアウイング（固定・黒）
-  ctx.fillStyle = '#222';
-  roundRect(ctx, 55, 150, 18, 60, 4); ctx.fill();
-  roundRect(ctx, 45, 150, 50, 12, 4); ctx.fill();
-  // フロントウイング
-  roundRect(ctx, 430, 215, 35, 12, 4); ctx.fill();
-  // ゼッケン丸（固定・白）
-  ctx.fillStyle = '#fff';
-  ctx.beginPath(); ctx.arc(160, 215, 14, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
-}
-
-function drawBulldozer(ctx) {
-  drawWheel(ctx, 150, 240, 40);
-  drawWheel(ctx, 320, 240, 44);
-  // 車体（body サンプル: 180,210）
-  roundRect(ctx, 95, 165, 300, 85, 18); fillStroke(ctx, BASE);
-  // 運転席（roof サンプル: 250,130）
-  roundRect(ctx, 175, 90, 150, 90, 16); fillStroke(ctx, BASE);
-  // 窓（固定）
-  ctx.fillStyle = '#8CC8F0';
-  roundRect(ctx, 195, 105, 110, 55, 8); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 3; roundRect(ctx, 195, 105, 110, 55, 8); ctx.stroke();
-  // 排土板（前の大きな板：固定の黄色）
-  ctx.fillStyle = '#FFC107';
-  roundRect(ctx, 400, 150, 40, 110, 8); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 4; roundRect(ctx, 400, 150, 40, 110, 8); ctx.stroke();
-  // アーム（固定・グレー）
-  ctx.strokeStyle = '#888'; ctx.lineWidth = 8;
-  ctx.beginPath(); ctx.moveTo(360, 200); ctx.lineTo(405, 195); ctx.stroke();
-  headlight(ctx, 388, 180);
-}
-
-function drawTrain(ctx) {
-  drawWheel(ctx, 130, 245, 28);
-  drawWheel(ctx, 200, 245, 28);
-  drawWheel(ctx, 300, 245, 28);
-  drawWheel(ctx, 370, 245, 28);
-  // 車体（body サンプル: 250,200）
-  roundRect(ctx, 55, 90, 390, 150, 18); fillStroke(ctx, BASE);
-  // 屋根の帯（roof サンプル: 250,80）
-  roundRect(ctx, 55, 78, 390, 34, 14); fillStroke(ctx, BASE);
-  // 窓を横一列（固定）
-  ctx.fillStyle = '#8CC8F0';
-  for (let i = 0; i < 4; i++) {
-    const wx = 80 + i * 95;
-    roundRect(ctx, wx, 130, 70, 55, 8); ctx.fill();
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 3; roundRect(ctx, wx, 130, 70, 55, 8); ctx.stroke();
-  }
-  // ドア（固定・濃いグレー）
-  ctx.fillStyle = '#777';
-  roundRect(ctx, 240, 125, 30, 110, 4); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 240, 125, 30, 110, 4); ctx.stroke();
-  // パンタグラフ（固定・黒）
-  ctx.strokeStyle = '#222'; ctx.lineWidth = 3;
-  ctx.beginPath(); ctx.moveTo(150, 78); ctx.lineTo(170, 55); ctx.lineTo(210, 55); ctx.lineTo(230, 78); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(165, 50); ctx.lineTo(215, 50); ctx.stroke();
-  headlight(ctx, 430, 215);
-}
-
-function drawShinkansen(ctx) {
-  drawWheel(ctx, 140, 245, 26);
-  drawWheel(ctx, 280, 245, 26);
-  // 流線型の先頭（右が前）：尖ったノーズ（body サンプル: 180,190）
-  ctx.beginPath();
-  ctx.moveTo(50, 150);
-  ctx.quadraticCurveTo(45, 120, 90, 115);
-  ctx.lineTo(330, 115);
-  ctx.quadraticCurveTo(430, 120, 458, 200);   // 伸びる鼻先
-  ctx.quadraticCurveTo(460, 225, 430, 235);
-  ctx.lineTo(70, 235);
-  ctx.quadraticCurveTo(50, 235, 50, 205);
-  ctx.closePath();
-  fillStroke(ctx, BASE);
-  // 上の帯（roof / ライン色 サンプル: 200,135）
-  ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(70, 150); ctx.lineTo(380, 150);
-  ctx.quadraticCurveTo(420, 152, 445, 185);
-  ctx.lineTo(445, 200); ctx.lineTo(70, 200); ctx.closePath();
-  ctx.clip();
-  roundRect(ctx, 50, 145, 410, 30, 0); fillStroke(ctx, BASE);
-  ctx.restore();
-  // 窓（固定・横長の連窓）
-  ctx.fillStyle = '#8CC8F0';
-  roundRect(ctx, 95, 130, 260, 26, 12); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 95, 130, 260, 26, 12); ctx.stroke();
-  // 先頭の運転窓（固定）
-  ctx.fillStyle = '#8CC8F0';
-  ctx.beginPath();
-  ctx.moveTo(370, 135); ctx.lineTo(415, 140); ctx.lineTo(420, 165); ctx.lineTo(375, 162); ctx.closePath();
-  ctx.fill(); ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
-  headlight(ctx, 440, 210);
-}
-
-function drawBike(ctx) {
-  // 前後の大きなタイヤ
-  drawWheel(ctx, 130, 235, 52);
-  drawWheel(ctx, 380, 235, 52);
-
-  // フロントフォーク（固定・グレー：前輪へ斜めに）
-  ctx.strokeStyle = '#888'; ctx.lineWidth = 9; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(335, 150); ctx.lineTo(380, 235); ctx.stroke();
-  // 排気管（固定・グレー：後ろへ）
-  ctx.strokeStyle = '#BBBBBB'; ctx.lineWidth = 10;
-  ctx.beginPath(); ctx.moveTo(300, 215); ctx.lineTo(150, 232); ctx.stroke();
-
-  // メインボディ（タンク＋シート土台：body サンプル 235,190）
-  ctx.lineCap = 'butt';
-  ctx.beginPath();
-  ctx.moveTo(150, 215);                       // 後輪の上あたり
-  ctx.lineTo(175, 175);                        // シート後ろ
-  ctx.lineTo(255, 168);                        // シート〜タンク
-  ctx.quadraticCurveTo(300, 165, 320, 185);    // タンク前のふくらみ
-  ctx.lineTo(330, 215);                        // 前下へ
-  ctx.closePath();
-  fillStroke(ctx, BASE);
-
-  // シート（固定・黒）
-  ctx.fillStyle = '#222';
-  ctx.beginPath();
-  ctx.moveTo(150, 175); ctx.lineTo(220, 170);
-  ctx.lineTo(220, 182); ctx.lineTo(155, 188); ctx.closePath();
-  ctx.fill();
-
-  // フロントカウル（前のカバー：roof サンプル 350,185）
-  ctx.beginPath();
-  ctx.moveTo(325, 165);
-  ctx.quadraticCurveTo(380, 168, 378, 215);
-  ctx.lineTo(345, 215);
-  ctx.quadraticCurveTo(340, 180, 322, 178);
-  ctx.closePath();
-  fillStroke(ctx, BASE);
-
-  // 風防（固定・水色）
-  ctx.fillStyle = '#8CC8F0';
-  ctx.beginPath();
-  ctx.moveTo(345, 165); ctx.quadraticCurveTo(370, 150, 372, 172);
-  ctx.lineTo(360, 178); ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; ctx.stroke();
-
-  // ハンドル（固定・黒）
-  ctx.strokeStyle = '#222'; ctx.lineWidth = 6; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(330, 168); ctx.lineTo(300, 140); ctx.stroke();
-  ctx.beginPath(); ctx.arc(298, 138, 7, 0, Math.PI*2); ctx.fillStyle = '#222'; ctx.fill();
-
-  // ヘッドライト
-  ctx.lineCap = 'butt';
-  headlight(ctx, 372, 195);
-}
-
-function drawAmbulance(ctx) {
-  drawWheel(ctx, 135, 240, 36);
-  drawWheel(ctx, 360, 240, 36);
-  // 大きな箱型ボディ（救急車：body サンプル 180,205）
-  roundRect(ctx, 55, 105, 280, 140, 16); fillStroke(ctx, BASE);
-  // 前の運転席（少し低い）
-  roundRect(ctx, 320, 150, 125, 95, 18); fillStroke(ctx, BASE);
-  // ルーフ帯（roof サンプル 250,110）
-  roundRect(ctx, 55, 95, 280, 28, 12); fillStroke(ctx, BASE);
-  // 運転席の窓（固定）
-  ctx.fillStyle = '#8CC8F0';
-  roundRect(ctx, 360, 162, 70, 46, 10); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 3; roundRect(ctx, 360, 162, 70, 46, 10); ctx.stroke();
-  // 後部の窓（固定）
-  ctx.fillStyle = '#8CC8F0';
-  roundRect(ctx, 80, 135, 60, 45, 8); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 80, 135, 60, 45, 8); ctx.stroke();
-  // 赤十字（固定・赤）
-  ctx.fillStyle = '#E02020';
-  ctx.fillRect(205, 165, 50, 16);
-  ctx.fillRect(222, 148, 16, 50);
-  // 赤いライン（固定）
-  ctx.fillStyle = '#E02020';
-  ctx.fillRect(55, 200, 390, 12);
-  // サイレン（固定・赤）
-  ctx.fillStyle = '#E02020';
-  roundRect(ctx, 170, 80, 40, 18, 5); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 170, 80, 40, 18, 5); ctx.stroke();
-  headlight(ctx, 438, 222);
-}
-
-function drawPolice(ctx) {
-  drawWheel(ctx, 130, 235, 38);
-  drawWheel(ctx, 370, 235, 38);
-  // ボディ（セダン：body サンプル 250,215）
-  roundRect(ctx, 70, 165, 360, 80, 32); fillStroke(ctx, BASE);
-  // キャビン（roof サンプル 250,120）
-  ctx.beginPath();
-  ctx.moveTo(150, 170); ctx.lineTo(180, 110);
-  ctx.quadraticCurveTo(190, 96, 215, 96);
-  ctx.lineTo(310, 96);
-  ctx.quadraticCurveTo(335, 96, 345, 110);
-  ctx.lineTo(370, 170); ctx.closePath();
-  fillStroke(ctx, BASE);
-  // 窓（固定）
-  ctx.fillStyle = '#8CC8F0';
-  ctx.beginPath();
-  ctx.moveTo(190,165); ctx.lineTo(210,118);
-  ctx.quadraticCurveTo(214,110,224,110); ctx.lineTo(248,110); ctx.lineTo(248,165); ctx.closePath(); ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(262,165); ctx.lineTo(262,110); ctx.lineTo(300,110);
-  ctx.quadraticCurveTo(312,110,316,120); ctx.lineTo(330,165); ctx.closePath(); ctx.fill();
-  // ルーフのサイレン（固定・赤青）
-  ctx.fillStyle = '#E02020'; roundRect(ctx, 232, 80, 24, 18, 4); ctx.fill();
-  ctx.fillStyle = '#2255EE'; roundRect(ctx, 256, 80, 24, 18, 4); ctx.fill();
-  ctx.strokeStyle = '#333'; ctx.lineWidth = 2; roundRect(ctx, 232, 80, 48, 18, 4); ctx.stroke();
-  // ドアの「POLICE」風の白帯（固定）
-  ctx.fillStyle = '#FFFFFF';
-  ctx.fillRect(120, 205, 200, 22);
-  ctx.fillStyle = '#222'; ctx.font = 'bold 18px sans-serif'; ctx.textAlign = 'center';
-  ctx.fillText('POLICE', 220, 222); ctx.textAlign = 'start';
-  headlight(ctx, 420, 185);
-}
-
-function floodFill(startX, startY, fillHex) {
-  const imageData = cCtx.getImageData(0, 0, coloringCanvas.width, coloringCanvas.height);
-  const data = imageData.data;
-  const W = coloringCanvas.width, H = coloringCanvas.height;
-  const [fr, fg, fb] = hexToRGB(fillHex);
-  const idx0 = (startY * W + startX) * 4;
-  const tr = data[idx0], tg = data[idx0+1], tb = data[idx0+2], ta = data[idx0+3];
-  if (tr===fr && tg===fg && tb===fb && ta===255) return;
-  // don't fill dark outlines
-  if (tr < 60 && tg < 60 && tb < 60 && ta > 200) return;
-  // don't fill glass area (light blue windows #8CC8F0)
-  if (tb > 215 && tr > 110 && tr < 185 && tg > 180 && tg < 225) return;
-
-  const stack = [startY * W + startX];
-  const visited = new Uint8Array(W * H);
-  while (stack.length) {
-    const i = stack.pop();
-    if (visited[i]) continue;
-    visited[i] = 1;
-    const x = i % W, y = Math.floor(i / W);
-    const p = i * 4;
-    if (data[p] !== tr || data[p+1] !== tg || data[p+2] !== tb || data[p+3] !== ta) continue;
-    // skip dark border pixels
-    if (data[p] < 60 && data[p+1] < 60 && data[p+2] < 60 && data[p+3] > 200) continue;
-    data[p]=fr; data[p+1]=fg; data[p+2]=fb; data[p+3]=255;
-    if (x > 0)   stack.push(i-1);
-    if (x < W-1) stack.push(i+1);
-    if (y > 0)   stack.push(i-W);
-    if (y < H-1) stack.push(i+W);
-  }
-  cCtx.putImageData(imageData, 0, 0);
-}
-
-// Build palette
-const paletteEl = document.getElementById('palette');
-PALETTE.forEach(p => {
-  const sw = document.createElement('div');
-  sw.className = 'color-swatch';
-  sw.style.background = p.hex;
-  if (p.hex === '#FFFFFF') sw.style.border = '4px solid #ccc';
-  sw.title = p.label;
-  sw.addEventListener('click', () => {
-    document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
-    sw.classList.add('selected');
-    selectedColor = p.hex;
-  });
-  paletteEl.appendChild(sw);
-});
-paletteEl.firstChild.classList.add('selected');
-
-// Build vehicle picker (働く車)
-const vehiclePickerEl = document.getElementById('vehiclePicker');
-VEHICLES.forEach((v, i) => {
-  const btn = document.createElement('div');
-  btn.className = 'vehicle-btn' + (i === 0 ? ' selected' : '');
-  btn.textContent = v.label;
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.vehicle-btn').forEach(b => b.classList.remove('selected'));
-    btn.classList.add('selected');
-    currentVehicle = v.id;
-    drawCarTemplate();
-  });
-  vehiclePickerEl.appendChild(btn);
-});
-
-coloringCanvas.addEventListener('click', e => {
-  const rect = coloringCanvas.getBoundingClientRect();
-  const scaleX = coloringCanvas.width / rect.width;
-  const scaleY = coloringCanvas.height / rect.height;
-  const x = Math.floor((e.clientX - rect.left) * scaleX);
-  const y = Math.floor((e.clientY - rect.top) * scaleY);
-  floodFill(x, y, selectedColor);
-});
-
-drawCarTemplate();
-
-// ════════════════════════════════════════════════════
-//  THREE.JS RACE
-// ════════════════════════════════════════════════════
-let scene, camera, renderer;
-let playerCar, cpuCars = [];
-let playerState, cpuStates = [];
-let gameRunning = false;
-let raceActive = false;   // レース画面に入っている間 true（二重スタート防止）
-let raceStartTime = 0;
-let animFrameId = null;
-
-// ── 複雑なサーキット（曲線で定義）──
-const TRACK_HALF = 9;        // コース半幅（車はこの内側を走る）
-const TRACK_N = 500;         // サンプル数
-let TRACK_SAMPLES = [];      // {x,z,tx,tz} 中央線の点と進行方向
-let trackCurve = null;
-
-function buildTrackCurve() {
-  // 半径をうねらせて複雑なコースにする（自己交差しない範囲）
-  const pts = [];
-  const M = 16;
-  for (let k = 0; k < M; k++) {
-    const th = k / M * Math.PI * 2;
-    const r = 70 + 22 * Math.sin(3 * th + 0.6) + 8 * Math.sin(5 * th);
-    pts.push(new THREE.Vector3(r * Math.cos(th), 0, r * 0.82 * Math.sin(th)));
-  }
-  trackCurve = new THREE.CatmullRomCurve3(pts, true, 'catmullrom', 0.5);
-  TRACK_SAMPLES = [];
-  for (let i = 0; i < TRACK_N; i++) {
-    const t = i / TRACK_N;
-    const p = trackCurve.getPointAt(t);
-    const tan = trackCurve.getTangentAt(t);
-    TRACK_SAMPLES.push({ x: p.x, z: p.z, tx: tan.x, tz: tan.z });
-  }
-}
-
-function nearestIdx(x, z) {
-  let best = 0, bd = Infinity;
-  for (let i = 0; i < TRACK_SAMPLES.length; i++) {
-    const s = TRACK_SAMPLES[i];
-    const dx = x - s.x, dz = z - s.z;
-    const d = dx*dx + dz*dz;
-    if (d < bd) { bd = d; best = i; }
-  }
-  return best;
-}
-
-const TOTAL_LAPS = 3;
-const CPU_COLORS = [0xFF4444, 0x4488FF, 0xFF8800, 0xAA44FF];
-
-const CAR_CONFIG = {
-  maxSpeed: 0.28,
-  acceleration: 0.009,
-  friction: 0.97,
-  turnSpeed: 0.038,
-};
-
-const keys = { left: false, right: false, up: false, down: false };
-
-// ── 画質アップ用ヘルパー ──
-// PBRマテリアル（つや・金属感を指定できる）
-function mat(color, opt = {}) {
-  const m = new THREE.MeshStandardMaterial({
-    color,
-    roughness: opt.rough != null ? opt.rough : 0.6,
-    metalness: opt.metal != null ? opt.metal : 0.0,
-    emissive: opt.emissive != null ? opt.emissive : 0x000000,
-    emissiveIntensity: opt.emissiveIntensity != null ? opt.emissiveIntensity : 1,
-  });
-  m.envMapIntensity = opt.env != null ? opt.env : 0.3;   // 環境反射ひかえめ（色が飛ばないように）
-  return m;
-}
-
-// 縦グラデーションの空テクスチャ（equirect）
-function makeSkyTexture() {
-  const c = document.createElement('canvas');
-  c.width = 16; c.height = 256;
-  const g = c.getContext('2d');
-  const grd = g.createLinearGradient(0, 0, 0, 256);
-  grd.addColorStop(0.0, '#3E78C8');   // 天頂：濃い空色
-  grd.addColorStop(0.5, '#7EB6E8');
-  grd.addColorStop(0.78, '#BFE3FF');  // 地平：淡い水色
-  grd.addColorStop(1.0, '#E8F6FF');
-  g.fillStyle = grd; g.fillRect(0, 0, 16, 256);
-  const tex = new THREE.CanvasTexture(c);
-  tex.mapping = THREE.EquirectangularReflectionMapping;
-  return tex;
-}
-
-// ムラ（ノイズ）テクスチャ。地面や路面ののっぺり感を消す。
-function makeNoiseTexture(base, variation, spots, spotColor) {
-  const N = 128;
-  const c = document.createElement('canvas');
-  c.width = N; c.height = N;
-  const g = c.getContext('2d');
-  g.fillStyle = base; g.fillRect(0, 0, N, N);
-  for (let i = 0; i < variation; i++) {
-    const x = Math.random()*N, y = Math.random()*N, r = 1 + Math.random()*3;
-    g.fillStyle = spotColor;
-    g.globalAlpha = 0.04 + Math.random()*0.08;
-    g.beginPath(); g.arc(x, y, r, 0, Math.PI*2); g.fill();
-  }
-  g.globalAlpha = 1;
-  const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-  return tex;
-}
-
-// ぬりえ画像を3D車の側面に貼るテクスチャ（透明部分は body 色で埋める）
-function makeBodyTexture(bgHex) {
-  const off = document.createElement('canvas');
-  off.width = coloringCanvas.width; off.height = coloringCanvas.height;
-  const o = off.getContext('2d');
-  o.fillStyle = '#' + (bgHex >>> 0).toString(16).padStart(6, '0').slice(-6);
-  o.fillRect(0, 0, off.width, off.height);
-  o.drawImage(coloringCanvas, 0, 0);
-  const t = new THREE.CanvasTexture(off);
-  t.needsUpdate = true;
-  return t;
-}
-// 車体色は塗った色をそのまま鮮やかに出すため、陰影なしのフラット塗り
-function carMat(color) {
-  return new THREE.MeshBasicMaterial({ color });
-}
-// ボディBox用：側面(±X)に塗り絵、その他の面はサンプル色。sideTexが無ければ単色。
-function bodyMaterial(parts, sideTex) {
-  const solid = carMat(parts.body);
-  if (!sideTex) return solid;
-  const mk = (m) => new THREE.MeshBasicMaterial({ map: m });
-  const right = mk(sideTex);
-  const left = mk(sideTex.clone());
-  left.map.wrapS = THREE.RepeatWrapping; left.map.repeat.x = -1; left.map.offset.x = 1; left.map.needsUpdate = true;
-  // [+X, -X, +Y, -Y, +Z, -Z] … 左右の側面に絵、上下/前後は単色
-  return [right, left, solid, solid, solid, solid];
-}
-
-// parts = { body, roof } の色（数値）。パーツごとに塗った色を反映する。
-function createToyCar(parts, type = 'car', sideTex = null) {
-  const group = new THREE.Group();
-  const bodyMat = bodyMaterial(parts, sideTex);   // 側面に塗り絵、他面はサンプル色
-  const roofMat = carMat(parts.roof);
-  const darkMat  = mat(0x222222, { rough: 0.9 });                  // ゴム/黒パーツ
-  const rimMat   = mat(0xFFD700, { rough: 0.3, metal: 0.6 });      // 金属ホイール
-  const grayMat  = mat(0x999999, { rough: 0.5, metal: 0.4 });
-  const yellowMat= mat(0xFFC107, { rough: 0.5, metal: 0.2 });
-  const glassMat = new THREE.MeshStandardMaterial({ color: 0x99CCFF, transparent: true, opacity: 0.6, roughness: 0.1, metalness: 0.0 });
-
-  function addWheel(x, z, r = 0.42) {
-    const w = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.32, 14), darkMat);
-    w.rotation.z = Math.PI/2; w.position.set(x, r - 0.07, z); group.add(w);
-    const rim = new THREE.Mesh(new THREE.CylinderGeometry(r*0.43, r*0.43, 0.34, 10), rimMat);
-    rim.rotation.z = Math.PI/2; rim.position.set(x, r - 0.07, z); group.add(rim);
-  }
-
-  if (type === 'truck') {
-    const cargo = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.3, 2.2), bodyMat);
-    cargo.position.set(0, 0.85, -0.7); group.add(cargo);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.0, 1.3), roofMat);
-    cab.position.set(0, 0.7, 1.4); group.add(cab);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.45, 0.08), glassMat);
-    glass.position.set(0, 0.95, 2.05); group.add(glass);
-    addWheel(0.97, 1.3); addWheel(-0.97, 1.3);
-    addWheel(0.97, -1.0); addWheel(-0.97, -1.0);
-  } else if (type === 'bus') {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.5, 4.2), bodyMat);
-    body.position.set(0, 0.95, 0); group.add(body);
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.25, 4.2), roofMat);
-    roof.position.set(0, 1.72, 0); group.add(roof);
-    for (let i = 0; i < 3; i++) {
-      const g = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.9), glassMat);
-      g.position.set(0.96, 1.1, -1.2 + i*1.2); group.add(g);
-      const g2 = g.clone(); g2.position.x = -0.96; group.add(g2);
+  if (b.type === 'houses') {
+    for (let a = 0; a < 2; a++) for (let c = 0; c < 2; c++) {
+      const w = 3.6 + r() * 1.2, h = 3.6 + r() * 1.2;
+      const cx = x0 + B * (.25 + .5 * a) + (r() - .5) * 0.8, cy = y0 + B * (.25 + .5 * c) + (r() - .5) * 0.8;
+      it.push({ k: 'flowers', x: cx - w / 2 - 0.5, y: cy - h / 2 - 0.5, w: w + 1, h: h + 1, n: 7, seed: (r() * 1e6) | 0 });
+      it.push({ k: 'house', x: cx - w / 2, y: cy - h / 2, w, h, dir: r() < .5, col: ['#d9574a', '#4a7fd9', '#e39a3b', '#7a8a99', '#b0633f', '#58a67a'][(r() * 6) | 0] });
+      so.push({ x: cx - w / 2, y: cy - h / 2, w, h });
     }
-    const front = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.5, 0.08), glassMat);
-    front.position.set(0, 1.2, 2.1); group.add(front);
-    addWheel(0.97, 1.4); addWheel(-0.97, 1.4);
-    addWheel(0.97, -1.4); addWheel(-0.97, -1.4);
-  } else if (type === 'fire') {
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.0, 3.6), bodyMat);
-    body.position.set(0, 0.7, -0.2); group.add(body);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.7, 1.0), roofMat);
-    cab.position.set(0, 1.25, 1.2); group.add(cab);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.4, 0.08), glassMat);
-    glass.position.set(0, 1.3, 1.7); group.add(glass);
-    const ladder = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.15, 3.0), grayMat);
-    ladder.position.set(0, 1.35, -0.6); group.add(ladder);
-    const siren = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.2, 0.3), mat(0xFF2222, { emissive: 0x550000 }));
-    siren.position.set(0, 1.7, 1.2); group.add(siren);
-    addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
-    addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
-  } else if (type === 'bulldozer') {
-    // ずんぐりした車体＋運転席＋前のブレード（排土板）
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.0, 3.0), bodyMat);
-    body.position.set(0, 0.85, -0.3); group.add(body);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.9, 1.2), roofMat);
-    cab.position.set(0, 1.7, -0.6); group.add(cab);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.6, 0.08), glassMat);
-    glass.position.set(0, 1.75, 0.0); group.add(glass);
-    // 排土板（前の大きな板：固定の黄色）
-    const blade = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.2, 0.3), yellowMat);
-    blade.position.set(0, 0.7, 2.0); group.add(blade);
-    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 1.4), grayMat);
-    armL.position.set(0.7, 0.6, 1.3); group.add(armL);
-    const armR = armL.clone(); armR.position.x = -0.7; group.add(armR);
-    // 大きいタイヤ
-    addWheel(0.95, 1.1, 0.55); addWheel(-0.95, 1.1, 0.55);
-    addWheel(0.95, -1.2, 0.65); addWheel(-0.95, -1.2, 0.65);
-  } else if (type === 'racecar') {
-    // 低くて速そうなレースカー
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.4, 4.0), bodyMat);
-    body.position.set(0, 0.45, 0); group.add(body);
-    const nose = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.3, 1.2), bodyMat);
-    nose.position.set(0, 0.4, 2.2); group.add(nose);
-    const cockpit = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.45, 1.3), roofMat);
-    cockpit.position.set(0, 0.75, -0.1); group.add(cockpit);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.35, 0.08), glassMat);
-    glass.position.set(0, 0.8, 0.55); group.add(glass);
-    // リアウイング（固定の黒）
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 0.6), darkMat);
-    wing.position.set(0, 0.95, -2.0); group.add(wing);
-    const ws1 = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.5), darkMat);
-    ws1.position.set(0.7, 0.7, -2.0); group.add(ws1);
-    const ws2 = ws1.clone(); ws2.position.x = -0.7; group.add(ws2);
-    // フロントウイング
-    const fw = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.08, 0.5), darkMat);
-    fw.position.set(0, 0.3, 2.7); group.add(fw);
-    addWheel(0.95, 1.3); addWheel(-0.95, 1.3);
-    addWheel(0.95, -1.3); addWheel(-0.95, -1.3);
-  } else if (type === 'train') {
-    // 箱型の長い車体＋屋根＋窓＋パンタグラフ
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.7, 4.4), bodyMat);
-    body.position.set(0, 1.0, 0); group.add(body);
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.3, 4.4), roofMat);
-    roof.position.set(0, 1.95, 0); group.add(roof);
-    for (let i = 0; i < 4; i++) {
-      const g = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.5, 0.7), glassMat);
-      g.position.set(0.96, 1.25, -1.5 + i*1.0); group.add(g);
-      const g2 = g.clone(); g2.position.x = -0.96; group.add(g2);
+    tree(x0 + B / 2, y0 + B / 2, 0.75);
+  } else if (b.type === 'park') {
+    const cx = x0 + B / 2, cy = y0 + B / 2;
+    it.push({ k: 'rect', x: x0, y: cy - 0.6, w: B, h: 1.2, col: '#e6d7a8' }, { k: 'rect', x: cx - 0.6, y: y0, w: 1.2, h: B, col: '#e6d7a8' });
+    it.push({ k: 'flowers', x: x0 + 0.4, y: y0 + 0.4, w: B - 0.8, h: B - 0.8, n: 22, seed: (r() * 1e6) | 0 });
+    let pond = null;
+    if (r() < .65) {
+      const qx = r() < .5 ? .26 : .74, qy = r() < .5 ? .26 : .74;
+      pond = { k: 'pond', x: x0 + B * qx, y: y0 + B * qy, rx: 1.7 + r() * 0.8, ry: 1.3 + r() * 0.6 };
+      it.push(pond); so.push({ x: pond.x - pond.rx * 0.75, y: pond.y - pond.ry * 0.75, w: pond.rx * 1.5, h: pond.ry * 1.5 });
     }
-    // パンタグラフ（固定・黒）
-    const panto = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.4, 1.0), darkMat);
-    panto.position.set(0, 2.3, -1.0); group.add(panto);
-    addWheel(0.97, 1.5); addWheel(-0.97, 1.5);
-    addWheel(0.97, -1.5); addWheel(-0.97, -1.5);
-  } else if (type === 'shinkansen') {
-    // 流線型：胴体＋尖った先頭＋屋根の帯
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.3, 3.4), bodyMat);
-    body.position.set(0, 0.85, -0.6); group.add(body);
-    // 先頭ノーズ（先細りの箱を回転）
-    const noseGeo = new THREE.CylinderGeometry(0.15, 1.0, 2.2, 4);
-    const nose = new THREE.Mesh(noseGeo, bodyMat);
-    nose.rotation.x = -Math.PI/2; nose.rotation.y = Math.PI/4;
-    nose.position.set(0, 0.85, 2.1); group.add(nose);
-    // 屋根の帯
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.3, 3.4), roofMat);
-    roof.position.set(0, 1.5, -0.6); group.add(roof);
-    // 連窓
-    const win = new THREE.Mesh(new THREE.BoxGeometry(1.72, 0.4, 2.6), glassMat);
-    win.position.set(0, 1.15, -0.6); group.add(win);
-    addWheel(0.9, 1.0); addWheel(-0.9, 1.0);
-    addWheel(0.9, -1.6); addWheel(-0.9, -1.6);
-  } else if (type === 'bike') {
-    // すっきりしたスポーツバイク（前後タイヤ）
-    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.4, 2.0), bodyMat);
-    frame.position.set(0, 0.72, 0); group.add(frame);
-    // タンク（後ろより）
-    const tank = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.45, 0.9), bodyMat);
-    tank.position.set(0, 1.0, -0.2); group.add(tank);
-    // シート（黒・後部）
-    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.9), darkMat);
-    seat.position.set(0, 1.05, -1.0); group.add(seat);
-    // フロントカウル（roof 色・前方）
-    const cowl = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.7, 0.7), roofMat);
-    cowl.position.set(0, 0.9, 1.4); group.add(cowl);
-    // 風防（ガラス）
-    const ws = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.35, 0.08), glassMat);
-    ws.position.set(0, 1.35, 1.45); ws.rotation.x = 0.55; group.add(ws);
-    // ハンドル（黒）
-    const bar = new THREE.Mesh(new THREE.BoxGeometry(0.85, 0.07, 0.07), darkMat);
-    bar.position.set(0, 1.25, 1.05); group.add(bar);
-    // 小さめライダー（roof 色ジャケット＋黒ヘルメット）
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.65, 0.55), roofMat);
-    torso.position.set(0, 1.45, -0.45); group.add(torso);
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.27, 10, 8), darkMat);
-    helmet.position.set(0, 1.95, -0.2); group.add(helmet);
-    // タイヤ（前後・大きめ）
-    addWheel(0, 1.25, 0.52); addWheel(0, -1.25, 0.52);
-  } else if (type === 'ambulance') {
-    // 箱型の救急車
-    const box = new THREE.Mesh(new THREE.BoxGeometry(1.9, 1.7, 2.6), bodyMat);
-    box.position.set(0, 1.05, -0.6); group.add(box);
-    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.1, 1.4), bodyMat);
-    cab.position.set(0, 0.75, 1.5); group.add(cab);
-    const roof = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.25, 2.6), roofMat);
-    roof.position.set(0, 2.0, -0.6); group.add(roof);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.5, 0.08), glassMat);
-    glass.position.set(0, 1.0, 2.2); group.add(glass);
-    // 赤十字（左右・固定赤）
-    const crossMat = mat(0xE02020, { rough: 0.5 });
-    [[0.97,0],[-0.97,0]].forEach(([sx]) => {
-      const h = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.25, 0.8), crossMat);
-      h.position.set(sx, 1.1, -0.6); group.add(h);
-      const v = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.8, 0.25), crossMat);
-      v.position.set(sx, 1.1, -0.6); group.add(v);
-    });
-    // サイレン（固定・赤）
-    const siren = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.22, 0.4), mat(0xE02020, { emissive: 0x550000 }));
-    siren.position.set(0, 2.25, -0.2); group.add(siren);
-    addWheel(0.97, 1.3); addWheel(-0.97, 1.3);
-    addWheel(0.97, -1.3); addWheel(-0.97, -1.3);
-  } else if (type === 'police') {
-    // セダン＋ルーフのサイレンバー
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
-    body.position.y = 0.5; group.add(body);
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), roofMat);
-    cabin.position.set(0, 1.1, 0.3); group.add(cabin);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.08), glassMat);
-    glass.position.set(0, 1.15, 1.3); group.add(glass);
-    // サイレンバー（赤・青）
-    const redL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.4), mat(0xE02020, { emissive: 0x550000 }));
-    redL.position.set(-0.3, 1.5, 0.3); group.add(redL);
-    const blueL = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.18, 0.4), mat(0x2255EE, { emissive: 0x001155 }));
-    blueL.position.set(0.3, 1.5, 0.3); group.add(blueL);
-    addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
-    addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
+    const placed = [];
+    for (let n = 0; n < 40 && placed.length < 7; n++) {
+      const rad = 0.75 + r() * 0.5, x = x0 + 1.1 + r() * (B - 2.2), y = y0 + 1.1 + r() * (B - 2.2);
+      if (Math.abs(x - cx) < 1.5 || Math.abs(y - cy) < 1.5) continue;
+      if (pond && Math.abs(x - pond.x) < pond.rx + rad && Math.abs(y - pond.y) < pond.ry + rad) continue;
+      if (placed.some(p => Math.hypot(p.x - x, p.y - y) < 2.3)) continue;
+      placed.push({ x, y }); tree(x, y, rad);
+    }
+  } else if (b.type === 'lot') {
+    spaces(y0 + 0.15, 4.6, .45); spaces(y0 + B - 4.75, 4.6, .45);
+  } else if (b.type === 'shop') {
+    const col = ['#f3c9a0', '#bfe0f5', '#f5e39a', '#d9c7f2', '#c9ecc0'][(r() * 5) | 0];
+    it.push({ k: 'shop', x: x0 + 0.5, y: y0 + 0.5, w: B - 1, h: 6.2, col, emoji: ['🍔', '🍦', '🛒', '🧸', '🍩', '⛽'][(r() * 6) | 0] });
+    so.push({ x: x0 + 0.5, y: y0 + 0.5, w: B - 1, h: 6.2 });
+    spaces(y0 + B - 4.75, 4.6, .35);
   } else {
-    // car
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.65, 3.5), bodyMat);
-    body.position.y = 0.5; group.add(body);
-    const cabin = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.6, 2.0), roofMat);
-    cabin.position.set(0, 1.1, 0.3); group.add(cabin);
-    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.5, 0.08), glassMat);
-    glass.position.set(0, 1.15, 1.3); group.add(glass);
-    addWheel(0.97, 1.2); addWheel(-0.97, 1.2);
-    addWheel(0.97, -1.2); addWheel(-0.97, -1.2);
-  }
-
-  group.traverse(o => { if (o.isMesh) o.castShadow = true; });
-  return group;
-}
-
-function buildScene(parts) {
-  scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(0xBFE3FF, 180, 460);
-
-  // 空（グラデーション）＋環境反射
-  const skyTex = makeSkyTexture();
-  scene.background = skyTex;
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  scene.environment = pmrem.fromEquirectangular(skyTex).texture;
-  pmrem.dispose();
-
-  // Lights：空と草が回り込むヘミスフィア＋太陽
-  scene.add(new THREE.HemisphereLight(0xFFFFFF, 0xBFD8AC, 0.35));
-  const sun = new THREE.DirectionalLight(0xFFFFFF, 0.7);
-  sun.position.set(60, 90, 40);
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(LOW_GFX ? 1024 : 2048, LOW_GFX ? 1024 : 2048);
-  sun.shadow.bias = -0.0005;
-  const sc = sun.shadow.camera;
-  sc.left = -110; sc.right = 110; sc.top = 110; sc.bottom = -110;
-  sc.near = 1; sc.far = 260; sc.updateProjectionMatrix();
-  scene.add(sun);
-
-  // Grass（緑のムラテクスチャでのっぺり解消）
-  const grassGeo = new THREE.PlaneGeometry(700, 700);
-  const grassTex = makeNoiseTexture('#5CBF47', 1400, true, '#3E9C32');
-  grassTex.repeat.set(60, 60);
-  const grassMat = mat(0xffffff, { rough: 0.95 });
-  grassMat.map = grassTex;
-  const grass = new THREE.Mesh(grassGeo, grassMat);
-  grass.rotation.x = -Math.PI/2; grass.receiveShadow = true;
-  scene.add(grass);
-
-  // Track — 複雑なサーキット（曲線）
-  buildTrackCurve();
-  buildTrack();
-
-  // Decorations
-  addDecorations();
-
-  // コース上の指定位置に車を配置
-  function placeOnTrack(obj, idx, lane) {
-    const s = TRACK_SAMPLES[((idx % TRACK_N) + TRACK_N) % TRACK_N];
-    const nx = -s.tz, nz = s.tx;  // 左方向の単位法線
-    obj.position.set(s.x + nx * lane, 0.1, s.z + nz * lane);
-    obj.rotation.y = Math.atan2(s.tx, s.tz);
-  }
-
-  // Player car（スタートライン）
-  playerCar = createToyCar(parts, currentVehicle, makeBodyTexture(parts.body));
-  placeOnTrack(playerCar, 0, 0);
-  scene.add(playerCar);
-  playerState = { speed: 0, lap: 0, passedHalf: false, finished: false, prevIdx: 0 };
-
-  // CPU cars（5台・別レーン・スタート手前に整列）
-  const cpuTypes  = ['racecar', 'truck', 'bulldozer', 'bus', 'fire'];
-  const cpuLanes  = [-3.8, 3.8, -3.8, 3.8, 0];
-  // 競り合うように互角〜やや速め。波(phase)で抜きつ抜かれつ。
-  const cpuSpeedF = [1.02, 0.99, 1.04, 1.00, 1.03];
-  for (let i = 0; i < 5; i++) {
-    const col = CPU_COLORS[i % CPU_COLORS.length];
-    const car = createToyCar({ body: col, roof: 0xEEEEEE }, cpuTypes[i % cpuTypes.length]);
-    placeOnTrack(car, -7 * (Math.floor(i / 2) + 1), cpuLanes[i]);
-    scene.add(car);
-    cpuCars.push(car);
-    cpuStates.push({
-      speed: 0, passedHalf: false, lap: 0, finished: false, prevIdx: 0,
-      lane: cpuLanes[i], speedFactor: cpuSpeedF[i],
-      phase: i * 1.7, freq: 0.45 + i * 0.07,   // 速度のゆらぎ（個体差）
-    });
-  }
-}
-
-// 中央線に沿って連続した帯（リボン）を作る。z-fightしない綺麗な路面に。
-function makeRibbon(latOffset, halfW, color, y, basic, tex) {
-  const pos = [], idx = [], uv = [];
-  for (let i = 0; i <= TRACK_N; i++) {
-    const s = TRACK_SAMPLES[i % TRACK_N];
-    const nx = -s.tz, nz = s.tx;            // 左方向の単位法線
-    const cx = s.x + nx * latOffset, cz = s.z + nz * latOffset;
-    pos.push(cx + nx * halfW, 0, cz + nz * halfW);
-    pos.push(cx - nx * halfW, 0, cz - nz * halfW);
-    const v = i * 0.5;
-    uv.push(0, v, 1, v);
-  }
-  for (let i = 0; i < TRACK_N; i++) {
-    const a = i*2, b = i*2+1, c = i*2+2, d = i*2+3;
-    idx.push(a, b, c,  b, d, c);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  const m = basic
-    ? new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })
-    : new THREE.MeshStandardMaterial({ color, side: THREE.DoubleSide, roughness: 0.95, metalness: 0.0, map: tex || null });
-  m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -1;
-  const mesh = new THREE.Mesh(g, m);
-  mesh.position.y = y; mesh.receiveShadow = !basic;
-  scene.add(mesh);
-  return mesh;
-}
-
-function buildTrack() {
-  const HALF = TRACK_HALF;
-  // 路面（連続・濃いアスファルト＋ザラつき）
-  const asphalt = makeNoiseTexture('#3c3c3c', 1200, true, '#202020');
-  asphalt.repeat.set(2, 1);
-  makeRibbon(0, HALF, 0xffffff, 0.02, false, asphalt);
-  // 外側の赤い縁石（左右）
-  makeRibbon( HALF + 0.6, 0.7, 0xE03030, 0.03, true);
-  makeRibbon(-(HALF + 0.6), 0.7, 0xE03030, 0.03, true);
-  // 白い路肩ライン（左右）
-  makeRibbon( HALF - 0.6, 0.35, 0xFFFFFF, 0.05, true);
-  makeRibbon(-(HALF - 0.6), 0.35, 0xFFFFFF, 0.05, true);
-  // センターライン（白・細い実線）
-  makeRibbon(0, 0.25, 0xFFFFFF, 0.05, true);
-
-  // スタート/フィニッシュの市松模様
-  const s = TRACK_SAMPLES[0];
-  const nx = -s.tz, nz = s.tx;
-  const ang = Math.atan2(s.tx, s.tz);
-  for (let r = 0; r < 2; r++) {
-    for (let c = 0; c < 9; c++) {
-      const col = ((r + c) % 2 === 0) ? 0x111111 : 0xFFFFFF;
-      const sq = new THREE.Mesh(new THREE.PlaneGeometry(HALF*2/9, 1.2),
-        new THREE.MeshBasicMaterial({ color: col }));
-      sq.rotation.x = -Math.PI/2; sq.rotation.z = -ang;
-      const side = (c - 4) * (HALF*2/9);
-      sq.position.set(s.x + nx*side + s.tx*(r*1.2), 0.06, s.z + nz*side + s.tz*(r*1.2));
-      scene.add(sq);
+    it.push({ k: 'field', x: x0 + 0.4, y: y0 + 0.4, w: B - 0.8, h: B - 0.8 });
+    const bx = x0 + (r() < .5 ? 0.9 : B - 4.1), by = y0 + (r() < .5 ? 0.9 : B - 4.7);
+    it.push({ k: 'house', x: bx, y: by, w: 3.2, h: 3.8, dir: true, col: '#b83a2e' }); so.push({ x: bx, y: by, w: 3.2, h: 3.8 });
+    for (let n = 0; n < 3; n++) {
+      const x = x0 + 1 + r() * (B - 2), y = y0 + 1 + r() * (B - 2);
+      if (x > bx - 1 && x < bx + 4.2 && y > by - 1 && y < by + 4.8) continue;
+      it.push({ k: 'hay', x, y }); so.push({ x, y, r: 0.5 });
     }
   }
-
-  // フェンス（外周）
-  const fenceMat = mat(0xFFFFFF, { rough: 0.7 });
-  const postMat  = mat(0xDD4444, { rough: 0.6 });
-  for (let i = 0; i < TRACK_N; i += 12) {
-    const sp = TRACK_SAMPLES[i];
-    const npx = -sp.tz, npz = sp.tx;
-    const off = HALF + 2.8;
-    [off, -off].forEach(o => {
-      const post = new THREE.Mesh(new THREE.BoxGeometry(0.25,1.3,0.25), postMat);
-      post.position.set(sp.x + npx*o, 0.65, sp.z + npz*o);
-      scene.add(post);
-      const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12,0.18, 5.0), fenceMat);
-      rail.position.set(sp.x + npx*o, 0.95, sp.z + npz*o);
-      rail.rotation.y = Math.atan2(sp.tx, sp.tz);
-      scene.add(rail);
-    });
-  }
+  return b;
 }
-
-// コースの“外側だけ”に装飾を散らす（路面に被らないよう必ず検証）
-function scatterOutside(count, fn, bandMin = 6, bandMax = 20) {
-  let placed = 0, attempts = 0;
-  while (placed < count && attempts < count * 15) {
-    attempts++;
-    const sp = TRACK_SAMPLES[Math.floor(Math.random() * TRACK_N)];
-    let nx = -sp.tz, nz = sp.tx;
-    // コースの外向き（原点から遠ざかる向き）に固定して内側／路面に出さない
-    if (nx * sp.x + nz * sp.z < 0) { nx = -nx; nz = -nz; }
-    const dist = TRACK_HALF + bandMin + Math.random() * (bandMax - bandMin);
-    const x = sp.x + nx * dist, z = sp.z + nz * dist;
-    // どのコース地点からも十分離れているか確認（カーブの裏で路面に乗らないように）
-    const s2 = TRACK_SAMPLES[nearestIdx(x, z)];
-    if (Math.hypot(x - s2.x, z - s2.z) < TRACK_HALF + 3) continue;
-    fn(x, z); placed++;
-  }
-}
-
-// 原点まわりの遠景リング（山・遠くの木など）に置く
-function ringPlace(count, rMin, rMax, fn) {
-  for (let k = 0; k < count; k++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = rMin + Math.random() * (rMax - rMin);
-    fn(Math.cos(a) * r, Math.sin(a) * r * 0.9, a);
-  }
-}
-
-// ── 部品を作るヘルパー ──
-function makePineTree(x, z) {
-  const g = new THREE.Group();
-  const h = 4 + Math.random() * 3;
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.4, h*0.4, 7), mat(0x7A4A1E, { rough: 0.9 }));
-  trunk.position.y = h*0.2; trunk.castShadow = true; g.add(trunk);
-  const green = mat(0x2E8B3D + Math.floor(Math.random()*0x002200), { rough: 0.85 });
-  for (let i = 0; i < 3; i++) {
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(1.6 - i*0.35, 1.8, 8), green);
-    cone.position.y = h*0.4 + i*1.1 + 0.6; cone.castShadow = true; g.add(cone);
-  }
-  g.position.set(x, 0, z); scene.add(g);
-}
-
-function makeRoundTree(x, z) {
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2.4, 7), mat(0x8B5A2B, { rough: 0.9 }));
-  trunk.position.set(x, 1.2, z); trunk.castShadow = true; scene.add(trunk);
-  const crownMat = mat(0x4CAF50, { rough: 0.85 });
-  for (let i = 0; i < 3; i++) {
-    const blob = new THREE.Mesh(new THREE.SphereGeometry(1.3 + Math.random()*0.5, 8, 7), crownMat);
-    blob.position.set(x + (Math.random()-0.5)*1.4, 3 + Math.random()*1.2, z + (Math.random()-0.5)*1.4);
-    blob.castShadow = true; scene.add(blob);
-  }
-}
-
-function makeBush(x, z) {
-  const m = mat(0x4FA84F, { rough: 0.9 });
-  for (let i = 0; i < 3; i++) {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.7 + Math.random()*0.4, 7, 6), m);
-    b.position.set(x + (Math.random()-0.5)*1.2, 0.5, z + (Math.random()-0.5)*1.2);
-    b.castShadow = true; scene.add(b);
-  }
-}
-
-function makeFlower(x, z) {
-  const colors = [0xFF5C8A, 0xFFD93B, 0xFF8A3D, 0xB45CFF, 0xFFFFFF];
-  const c = colors[Math.floor(Math.random()*colors.length)];
-  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.6, 5), mat(0x3E9C32, { rough: 0.9 }));
-  stem.position.set(x, 0.3, z); scene.add(stem);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.22, 7, 6), mat(c, { rough: 0.6, emissive: c, emissiveIntensity: 0.15 }));
-  head.position.set(x, 0.65, z); scene.add(head);
-}
-
-function makeHouse(x, z, ang) {
-  const g = new THREE.Group();
-  const wallCol = [0xF5E6C8, 0xFFD9B3, 0xD6ECFF, 0xFFE0E0][Math.floor(Math.random()*4)];
-  const base = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 4), mat(wallCol, { rough: 0.8 }));
-  base.position.y = 1.5; base.castShadow = true; g.add(base);
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(3.4, 2, 4), mat(0xB5462E, { rough: 0.7 }));
-  roof.position.y = 4; roof.rotation.y = Math.PI/4; roof.castShadow = true; g.add(roof);
-  const door = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.5, 0.1), mat(0x7A4A1E, { rough: 0.8 }));
-  door.position.set(0, 0.75, 2.02); g.add(door);
-  g.position.set(x, 0, z); g.rotation.y = ang; scene.add(g);
-}
-
-function makeMountain(x, z) {
-  const h = 22 + Math.random() * 28;
-  const r = h * (0.8 + Math.random()*0.4);
-  const col = Math.random() < 0.5 ? 0x7C9A6E : 0x8FA98A;
-  const mtn = new THREE.Mesh(new THREE.ConeGeometry(r, h, 9), mat(col, { rough: 1.0, env: 0.1 }));
-  mtn.position.set(x, h/2 - 2, z); scene.add(mtn);
-  // 雪をかぶった頂
-  if (Math.random() < 0.6) {
-    const cap = new THREE.Mesh(new THREE.ConeGeometry(r*0.32, h*0.28, 9), mat(0xF5FAFF, { rough: 0.9, env: 0.1 }));
-    cap.position.set(x, h*0.86 - 2, z); scene.add(cap);
-  }
-}
-
-function makeCloud(x, y, z) {
-  const m = mat(0xFFFFFF, { rough: 1.0, env: 0.0, emissive: 0xFFFFFF, emissiveIntensity: 0.05 });
-  const g = new THREE.Group();
-  const n = 3 + Math.floor(Math.random()*3);
-  for (let i = 0; i < n; i++) {
-    const puff = new THREE.Mesh(new THREE.SphereGeometry(3 + Math.random()*2.5, 8, 7), m);
-    puff.position.set((Math.random()-0.5)*9, (Math.random()-0.5)*1.5, (Math.random()-0.5)*5);
-    g.add(puff);
-  }
-  g.position.set(x, y, z); g.scale.y = 0.7; scene.add(g);
-}
-
-function addDecorations() {
-  // 遠景の山（ぐるりと囲む）
-  ringPlace(16, 150, 230, (x, z) => makeMountain(x, z));
-  // 雲（空に浮かべる）
-  for (let i = 0; i < 14; i++) {
-    const a = Math.random()*Math.PI*2, r = 60 + Math.random()*160;
-    makeCloud(Math.cos(a)*r, 45 + Math.random()*30, Math.sin(a)*r*0.9);
-  }
-  // 遠めの森（松の木をたくさん）
-  scatterOutside(40, (x, z) => makePineTree(x, z), 18, 55);
-  // コースぎわの木・茂み・花
-  scatterOutside(22, (x, z) => makeRoundTree(x, z), 7, 22);
-  scatterOutside(30, (x, z) => makeBush(x, z), 4, 24);
-  scatterOutside(60, (x, z) => makeFlower(x, z), 3, 20);
-  // 家（数軒）
-  scatterOutside(6, (x, z) => makeHouse(x, z, Math.random()*Math.PI*2), 16, 40);
-
-  // きのこ（残す・かわいいアクセント）
-  scatterOutside(12, (x, z) => {
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,1.2,8),
-      mat(0xEEDDBB, { rough: 0.8 }));
-    stem.position.set(x, 0.6, z); stem.castShadow = true; scene.add(stem);
-    const cap = new THREE.Mesh(new THREE.SphereGeometry(1.0, 12, 10, 0, Math.PI*2, 0, Math.PI/2),
-      mat(0xFF2222, { rough: 0.5 }));
-    cap.position.set(x, 1.4, z); cap.castShadow = true; scene.add(cap);
-    for (let i = 0; i < 4; i++) {
-      const spot = new THREE.Mesh(new THREE.SphereGeometry(0.18,6,6),
-        mat(0xFFFFFF, { rough: 0.6 }));
-      const a = (i/4)*Math.PI*2;
-      spot.position.set(x + Math.cos(a)*0.55, 1.7, z + Math.sin(a)*0.55);
-      scene.add(spot);
+function drawBlock(c, b) {
+  const X = b.i * G + RH, Y = b.j * G + RH, S = G - 2 * RH;
+  c.fillStyle = pat.walk; rr(c, X, Y, S, S, 1.5); c.fill();
+  c.lineWidth = 0.12; c.strokeStyle = '#f1ede2'; c.stroke();
+  const paved = b.type === 'lot' || b.type === 'shop';
+  c.fillStyle = paved ? pat.lot : b.type === 'farm' ? '#a9d46a' : pat.grass;
+  rr(c, b.x0, b.y0, b.B, b.B, 0.7); c.fill();
+  for (const o of b.items) {
+    switch (o.k) {
+      case 'tree': drawTree(c, o.x, o.y, o.r); break;
+      case 'rect': c.fillStyle = o.col; c.fillRect(o.x, o.y, o.w, o.h); break;
+      case 'car': c.save(); c.translate(o.x, o.y); c.rotate(o.rot); drawCarShape(c, o.col); c.restore(); break;
+      case 'house':
+        c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(o.x + 0.3, o.y + 0.35, o.w, o.h);
+        c.fillStyle = o.col; rr(c, o.x, o.y, o.w, o.h, 0.15); c.fill();
+        c.fillStyle = 'rgba(0,0,0,.16)';
+        if (o.dir) c.fillRect(o.x + o.w / 2, o.y, o.w / 2, o.h); else c.fillRect(o.x, o.y + o.h / 2, o.w, o.h / 2);
+        c.strokeStyle = 'rgba(255,255,255,.4)'; c.lineWidth = 0.1; c.beginPath();
+        if (o.dir) { c.moveTo(o.x + o.w / 2, o.y + 0.1); c.lineTo(o.x + o.w / 2, o.y + o.h - 0.1); } else { c.moveTo(o.x + 0.1, o.y + o.h / 2); c.lineTo(o.x + o.w - 0.1, o.y + o.h / 2); }
+        c.stroke();
+        c.strokeStyle = 'rgba(0,0,0,.1)'; c.lineWidth = 0.05; c.beginPath();
+        for (let q = 0.5; q < (o.dir ? o.h : o.w); q += 0.5) { if (o.dir) { c.moveTo(o.x, o.y + q); c.lineTo(o.x + o.w, o.y + q); } else { c.moveTo(o.x + q, o.y); c.lineTo(o.x + q, o.y + o.h); } }
+        c.stroke();
+        c.fillStyle = '#6b5b53'; c.fillRect(o.x + o.w * 0.7, o.y + o.h * 0.18, 0.5, 0.5);
+        break;
+      case 'shop':
+        c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(o.x + 0.35, o.y + 0.4, o.w, o.h);
+        c.fillStyle = o.col; rr(c, o.x, o.y, o.w, o.h, 0.2); c.fill();
+        c.strokeStyle = 'rgba(0,0,0,.18)'; c.lineWidth = 0.18; rr(c, o.x + 0.3, o.y + 0.3, o.w - 0.6, o.h - 0.6, 0.15); c.stroke();
+        c.fillStyle = '#9aa3ad'; c.fillRect(o.x + 0.9, o.y + 0.9, 1.1, 0.9); c.fillRect(o.x + o.w - 2, o.y + 0.9, 1.1, 0.9);
+        c.fillStyle = '#e8483f'; c.fillRect(o.x, o.y + o.h - 0.55, o.w, 0.55);
+        c.fillStyle = '#fff'; for (let q = 0.4; q < o.w - 0.4; q += 1.2) c.fillRect(o.x + q, o.y + o.h - 0.55, 0.6, 0.55);
+        c.font = '3px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#000';
+        c.fillText(o.emoji, o.x + o.w / 2, o.y + o.h / 2 - 0.1);
+        break;
+      case 'spaces':
+        c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 0.12; c.beginPath();
+        for (let s = 0; s <= o.n; s++) { c.moveTo(o.x + s * o.w, o.y); c.lineTo(o.x + s * o.w, o.y + o.d); }
+        c.stroke(); break;
+      case 'pond':
+        c.fillStyle = '#d9cfa6'; c.beginPath(); c.ellipse(o.x, o.y, o.rx + 0.25, o.ry + 0.25, 0, 0, 6.2832); c.fill();
+        c.fillStyle = '#4fb3e8'; c.beginPath(); c.ellipse(o.x, o.y, o.rx, o.ry, 0, 0, 6.2832); c.fill();
+        c.fillStyle = 'rgba(255,255,255,.35)'; c.beginPath(); c.ellipse(o.x - o.rx * 0.3, o.y - o.ry * 0.3, o.rx * 0.35, o.ry * 0.22, -0.4, 0, 6.2832); c.fill();
+        break;
+      case 'flowers': {
+        const q = rng(o.seed);
+        for (let n = 0; n < o.n; n++) {
+          const x = o.x + q() * o.w, y = o.y + q() * o.h;
+          c.fillStyle = ['#ff6b8b', '#fff', '#ffd23f', '#c58cf2'][(q() * 4) | 0]; circle(c, x, y, 0.16); c.fill();
+          c.fillStyle = '#f2a900'; circle(c, x, y, 0.06); c.fill();
+        }
+        break;
+      }
+      case 'field':
+        c.fillStyle = '#a97f52'; rr(c, o.x, o.y, o.w, o.h, 0.3); c.fill();
+        c.strokeStyle = '#8f6a43'; c.lineWidth = 0.35; c.beginPath();
+        for (let q = 0.7; q < o.h; q += 1) { c.moveTo(o.x + 0.3, o.y + q); c.lineTo(o.x + o.w - 0.3, o.y + q); }
+        c.stroke();
+        c.strokeStyle = '#4caf50'; c.lineWidth = 0.36; c.lineCap = 'round'; c.setLineDash([0.01, 0.7]); c.beginPath();
+        for (let q = 0.7; q < o.h; q += 1) { c.moveTo(o.x + 0.5, o.y + q); c.lineTo(o.x + o.w - 0.4, o.y + q); }
+        c.stroke(); c.setLineDash([]); c.lineCap = 'butt';
+        break;
+      case 'hay':
+        c.fillStyle = 'rgba(0,0,0,.2)'; circle(c, o.x + 0.12, o.y + 0.14, 0.55); c.fill();
+        c.fillStyle = '#e8c860'; circle(c, o.x, o.y, 0.55); c.fill();
+        c.strokeStyle = '#c9a53e'; c.lineWidth = 0.07; circle(c, o.x, o.y, 0.3); c.stroke();
+        break;
     }
-  });
-
-  // ヤシの木（南国アクセント）
-  scatterOutside(10, (x, z) => {
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.35, 4, 8),
-      mat(0x8B6914, { rough: 0.85 }));
-    trunk.position.set(x, 2, z); trunk.castShadow = true; scene.add(trunk);
-    const leaves = new THREE.Mesh(new THREE.SphereGeometry(1.8, 8, 6),
-      mat(0x33AA22, { rough: 0.8 }));
-    leaves.scale.y = 0.6; leaves.position.set(x, 4.5, z); leaves.castShadow = true; scene.add(leaves);
-  });
-
-  // 岩
-  scatterOutside(10, (x, z) => {
-    const rock = new THREE.Mesh(new THREE.SphereGeometry(1.2 + Math.random()*0.5, 7, 6),
-      mat(0x888877, { rough: 0.9 }));
-    rock.scale.set(1, 0.65 + Math.random()*0.3, 1.2 + Math.random()*0.3);
-    rock.position.set(x, 0.5, z); rock.castShadow = true; scene.add(rock);
-  });
+  }
 }
-
-function updateCamera() {
-  const offset = new THREE.Vector3(0, 4.5, -9);
-  offset.applyQuaternion(playerCar.quaternion);
-  const targetPos = playerCar.position.clone().add(offset);
-  camera.position.lerp(targetPos, 0.1);
-  camera.lookAt(playerCar.position.x, playerCar.position.y + 1.2, playerCar.position.z);
+function drawTown(c, x, y, R) {
+  c.fillStyle = pat.asphalt; c.fillRect(x - R, y - R, 2 * R, 2 * R);
+  const i0 = Math.floor((x - R) / G), i1 = Math.floor((x + R) / G), j0 = Math.floor((y - R) / G), j1 = Math.floor((y + R) / G);
+  for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) drawBlock(c, getBlock(i, j));
+  // 交差点ごとに、4方向の腕の道路標示を描く（左側通行）
+  for (let i = i0; i <= i1 + 1; i++) for (let j = j0; j <= j1 + 1; j++) {
+    if (Math.abs(i * G - x) > R + G / 2 || Math.abs(j * G - y) > R + G / 2) continue;
+    c.save(); c.translate(i * G, j * G);
+    for (let a = 0; a < 4; a++) {
+      c.fillStyle = 'rgba(255,255,255,.9)';
+      for (let q = -RH + 0.35; q < RH - 0.5; q += 0.92) c.fillRect(q, -RH - 1.9, 0.5, 1.6);   // 横断歩道
+      c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);                                           // 停止線
+      c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.14; c.setLineDash([1.4, 1.4]);
+      c.beginPath(); c.moveTo(0, -RH - 2.8); c.lineTo(0, -G / 2); c.stroke(); c.setLineDash([]);  // センターライン
+      if (hash(i, j, a) < .45) { c.fillStyle = 'rgba(40,42,48,.55)'; circle(c, (hash(i, j, a + 9) < .5 ? -1 : 1) * 1.3, -G / 2 + 1.5 + hash(i, j, a + 5) * 3, 0.42); c.fill(); c.strokeStyle = 'rgba(160,165,172,.6)'; c.lineWidth = 0.06; c.stroke(); }
+      c.rotate(Math.PI / 2);
+    }
+    c.restore();
+  }
 }
-
-// コースの中央線(楕円)から一定距離内に車を押し戻す
-const CAR_KEEP = TRACK_HALF - 1.5;   // 車を留める半幅（路肩より内側）
-function constrainToTrack(pos) {
-  const i = nearestIdx(pos.x, pos.z);
-  const s = TRACK_SAMPLES[i];
-  const dx = pos.x - s.x, dz = pos.z - s.z;
-  const dist = Math.hypot(dx, dz);
-  if (dist > CAR_KEEP) {
-    pos.x = s.x + dx / dist * CAR_KEEP;
-    pos.z = s.z + dz / dist * CAR_KEEP;
-    return true; // はみ出した
+function surfaceAt(x, y) {
+  const lx = Math.abs(x - Math.round(x / G) * G), ly = Math.abs(y - Math.round(y / G) * G);
+  if (lx <= RH || ly <= RH) return 'road';
+  if (lx <= RH + SW || ly <= RH + SW) return 'walk';
+  const t = getBlock(Math.floor(x / G), Math.floor(y / G)).type;
+  return (t === 'lot' || t === 'shop') ? 'road' : 'grass';
+}
+function solidAt(x, y) {
+  const b = getBlock(Math.floor(x / G), Math.floor(y / G));
+  for (const s of b.solids) {
+    if (s.r) { if ((x - s.x) * (x - s.x) + (y - s.y) * (y - s.y) < s.r * s.r) return true; }
+    else if (x > s.x && x < s.x + s.w && y > s.y && y < s.y + s.h) return true;
   }
   return false;
 }
-
-function updatePlayerCar() {
-  if (!gameRunning || playerState.finished) return;
-  playerState.speed = Math.min(playerState.speed + CAR_CONFIG.acceleration, CAR_CONFIG.maxSpeed);
-  playerState.speed *= CAR_CONFIG.friction;
-  // ── オートステア（常時ON）：コースの少し先のサンプル点を狙って沿う ──
-  const pos = playerCar.position;
-  const i = nearestIdx(pos.x, pos.z);
-  const look = TRACK_SAMPLES[(i + 14) % TRACK_N];           // 少し先の中央線
-  let desired = Math.atan2(look.x - pos.x, look.z - pos.z);
-  let d = desired - playerCar.rotation.y;
-  d = Math.atan2(Math.sin(d), Math.cos(d));                 // -π..π
-  // 中央線からズレているほど強く補正（はみ出し防止）
-  const cs = TRACK_SAMPLES[i];
-  const off = Math.hypot(pos.x - cs.x, pos.z - cs.z);
-  const autoRate = Math.min(0.30, 0.16 + off * 0.03);
-  playerCar.rotation.y += d * autoRate;
-
-  // 手動操作はその上に乗せる小さなハンドル補助（道の中で左右に寄れる）
-  const manual = CAR_CONFIG.turnSpeed * Math.max(0.4, playerState.speed / CAR_CONFIG.maxSpeed);
-  if (keys.left)  playerCar.rotation.y += manual;
-  if (keys.right) playerCar.rotation.y -= manual;
-
-  const dir = new THREE.Vector3(0,0,1).applyQuaternion(playerCar.quaternion);
-  playerCar.position.addScaledVector(dir, playerState.speed);
-  // コースの外に出ないように押し戻す（出たら少し減速）
-  if (constrainToTrack(playerCar.position)) playerState.speed *= 0.85;
-  playerCar.position.y = 0.1;
-}
-
-function updateCPUCar(car, state) {
-  if (!gameRunning || state.finished) return;
-
-  // コース曲線のルックアヘッドで滑らかに操舵（くるくる回らない）
-  const pos = car.position;
-  const i = nearestIdx(pos.x, pos.z);
-  const look = TRACK_SAMPLES[(i + 14) % TRACK_N];
-  const lane = state.lane || 0;
-  // 先の点をレーン分だけ横にずらす（左方向法線）
-  const tx = look.x + (-look.tz) * lane;
-  const tz = look.z + ( look.tx) * lane;
-
-  let desired = Math.atan2(tx - pos.x, tz - pos.z);
-  let d = desired - car.rotation.y;
-  d = Math.atan2(Math.sin(d), Math.cos(d));   // -π..π
-  car.rotation.y += d * 0.14;                  // 比例制御（振動しない）
-
-  // ── 速度：抜きつ抜かれつ → 最後はプレイヤーが1番になる ──
-  const t = (Date.now() - raceStartTime) / 1000;
-  // ゆらぎで競り合い（速くなったり遅くなったり）
-  let factor = (state.speedFactor || 1) + 0.16 * Math.sin(t * (state.freq || 0.5) + (state.phase || 0));
-  let target = CAR_CONFIG.maxSpeed * factor;
-
-  // 進み具合（周回＋コース位置）
-  const pProg = playerState.lap + (playerState.prevIdx || 0) / TRACK_N;
-  const cProg = state.lap + (state.prevIdx || 0) / TRACK_N;
-  // 最終ラップは、プレイヤーより前にいるCPUを失速させて必ず抜かせる
-  if (pProg > TOTAL_LAPS - 1.0 && cProg >= pProg - 0.015) {
-    target = CAR_CONFIG.maxSpeed * 0.5;
+// まちの星: 道路の区間ごとに決まった場所に出る
+function townStars(x, y, R, cb) {
+  const i0 = Math.floor((x - R) / G), i1 = Math.ceil((x + R) / G), j0 = Math.floor((y - R) / G), j1 = Math.ceil((y + R) / G);
+  for (let i = i0; i <= i1; i++) for (let j = j0; j <= j1; j++) {
+    if (hash(i, j, 21) < .6) cb('v' + i + ',' + j, i * G + (hash(i, j, 22) < .5 ? -1 : 1) * RH / 2, j * G + G * (.3 + .4 * hash(i, j, 23)));
+    if (hash(i, j, 31) < .6) cb('h' + i + ',' + j, i * G + G * (.3 + .4 * hash(i, j, 33)), j * G + (hash(i, j, 32) < .5 ? -1 : 1) * RH / 2);
   }
-
-  state.speed += (target - state.speed) * 0.04;          // なめらかに増減
-  state.speed = Math.max(state.speed, 0.05);
-
-  const dir = new THREE.Vector3(0, 0, 1).applyQuaternion(car.quaternion);
-  car.position.addScaledVector(dir, state.speed);
-  constrainToTrack(car.position);
-  car.position.y = 0.1;
 }
 
-// 車どうしが重ならないように押し離す
-function separateCars() {
-  const all = [playerCar, ...cpuCars];
-  const minD = 3.2;
-  for (let a = 0; a < all.length; a++) {
-    for (let b = a + 1; b < all.length; b++) {
-      const A = all[a].position, B = all[b].position;
-      let dx = B.x - A.x, dz = B.z - A.z;
-      let d = Math.hypot(dx, dz);
-      if (d < minD && d > 0.0001) {
-        const push = (minD - d) / 2;
-        dx /= d; dz /= d;
-        A.x -= dx * push; A.z -= dz * push;
-        B.x += dx * push; B.z += dz * push;
+// ================================================================
+//  こうそくどうろ（まっすぐ無限に続く3車線）
+// ================================================================
+let traffic = [];
+function drawHighway(c, x, y, R) {
+  c.fillStyle = pat.grass; c.fillRect(x - R, y - R, 2 * R, 2 * R);
+  const ya = y - R, yb = y + R;
+  c.fillStyle = '#9aa0a8'; c.fillRect(-HW_RAIL - 0.5, ya, 2 * HW_RAIL + 1, 2 * R);
+  c.fillStyle = pat.asphalt; c.fillRect(-HW_RAIL, ya, 2 * HW_RAIL, 2 * R);
+  // 路面のつなぎ目（流れる目印）
+  c.fillStyle = 'rgba(0,0,0,.16)';
+  for (let k = Math.floor(ya / 12); k <= Math.ceil(yb / 12); k++) c.fillRect(-HW_RAIL, k * 12, 2 * HW_RAIL, 0.12);
+  c.strokeStyle = '#fff'; c.lineWidth = 0.18;
+  c.beginPath(); c.moveTo(-HW_HALF, ya); c.lineTo(-HW_HALF, yb); c.moveTo(HW_HALF, ya); c.lineTo(HW_HALF, yb); c.stroke();
+  const ys = Math.floor(ya / 6) * 6;
+  c.setLineDash([3, 3]); c.beginPath();
+  c.moveTo(-HW_LANE / 2, ys); c.lineTo(-HW_LANE / 2, yb); c.moveTo(HW_LANE / 2, ys); c.lineTo(HW_LANE / 2, yb); c.stroke(); c.setLineDash([]);
+  // ガードレール
+  for (const s of [-1, 1]) {
+    c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(s * HW_RAIL - 0.05, ya, 0.34, 2 * R);
+    c.fillStyle = '#e9edf2'; c.fillRect(s * HW_RAIL - 0.13, ya, 0.26, 2 * R);
+    c.fillStyle = '#8a929c'; for (let k = Math.floor(ya / 2); k <= Math.ceil(yb / 2); k++) c.fillRect(s * HW_RAIL - 0.13, k * 2, 0.26, 0.26);
+  }
+  // 道路のわきの景色
+  for (let k = Math.floor(ya / 7) - 1; k <= Math.ceil(yb / 7); k++) for (const s of [-1, 1]) {
+    const h = hash(k, s, 41), px = s * (6.6 + hash(k, s, 42) * 3.5), py = k * 7 + hash(k, s, 43) * 4;
+    if (h < .5) drawTree(c, px, py, 0.9 + hash(k, s, 44) * 0.6);
+    else if (h < .62) { c.fillStyle = 'rgba(0,0,0,.25)'; c.fillRect(px - 1.7, py - 1.6, 4, 4); c.fillStyle = ['#d9574a', '#4a7fd9', '#e39a3b'][(hash(k, s, 45) * 3) | 0]; c.fillRect(px - 2, py - 2, 4, 4); c.fillStyle = 'rgba(0,0,0,.16)'; c.fillRect(px, py - 2, 2, 4); }
+    else if (h < .8) { c.fillStyle = '#ff6b8b'; circle(c, px, py, 0.18); c.fill(); c.fillStyle = '#fff'; circle(c, px + 0.8, py + 0.5, 0.18); c.fill(); c.fillStyle = '#ffd23f'; circle(c, px - 0.5, py + 0.9, 0.18); c.fill(); }
+  }
+}
+function drawGantries(c, y, R) {   // 案内標識（車の上をまたぐので最後に描く）
+  for (let k = Math.floor((y - R) / 70); k <= Math.ceil((y + R) / 70); k++) {
+    const gy = k * 70 + 35;
+    c.fillStyle = 'rgba(0,0,0,.2)'; c.fillRect(-HW_RAIL - 0.6, gy + 0.5, 2 * HW_RAIL + 1.2, 0.5);
+    c.fillStyle = '#8a929c'; c.fillRect(-HW_RAIL - 0.6, gy, 2 * HW_RAIL + 1.2, 0.4);
+    for (let l = -1; l <= 1; l++) {
+      c.fillStyle = '#1f8a4c'; rr(c, l * HW_LANE - 1, gy - 0.5, 2, 1.4, 0.15); c.fill();
+      c.strokeStyle = '#fff'; c.lineWidth = 0.07; c.stroke();
+      c.fillStyle = '#fff'; c.beginPath(); c.moveTo(l * HW_LANE, gy - 0.3); c.lineTo(l * HW_LANE + 0.4, gy + 0.2); c.lineTo(l * HW_LANE + 0.13, gy + 0.2); c.lineTo(l * HW_LANE + 0.13, gy + 0.7); c.lineTo(l * HW_LANE - 0.13, gy + 0.7); c.lineTo(l * HW_LANE - 0.13, gy + 0.2); c.lineTo(l * HW_LANE - 0.4, gy + 0.2); c.closePath(); c.fill();
+    }
+  }
+}
+function highwayStars(y, R, cb) {
+  for (let k = Math.floor((y - R) / 9); k <= Math.ceil((y + R) / 9); k++)
+    if (hash(k, 7, 51) < .55) cb('s' + k, (Math.floor(hash(k, 8, 52) * 3) - 1) * HW_LANE, k * 9 + 4.5);
+}
+function updateTraffic(dt, cx, cy) {
+  traffic = traffic.filter(t => Math.abs(t.y - cy) < 55);
+  if (traffic.length < 5 && Math.random() < dt * 2) {
+    const lane = ((Math.random() * 3) | 0) - 1, ahead = car.v > 6 || Math.random() < .3;
+    const y = cy + (ahead ? -1 : 1) * (26 + Math.random() * 16);
+    if (!traffic.some(t => t.lane === lane && Math.abs(t.y - y) < 9))
+      traffic.push({ lane, x: lane * HW_LANE, y, v: 5.5 + Math.random() * 2.5, base: 0, col: COLORS[(Math.random() * COLORS.length) | 0], wait: 0 });
+  }
+  for (const t of traffic) {
+    if (!t.base) t.base = t.v;
+    let target = t.base, blocked = false;
+    const others = traffic.concat([{ x: cx, y: cy, v: Math.max(0, car.v), me: 1 }]);
+    for (const o of others) {
+      if (o === t) continue; const dy = t.y - o.y;
+      if (Math.abs(o.x - t.x) < 1.9 && dy > 0 && dy < 9) { target = Math.min(target, dy < 5.6 ? 0 : o.v); blocked = true; }
+    }
+    t.v += clamp(target - t.v, -14 * dt, 5 * dt); if (t.v < 0) t.v = 0;
+    t.wait = blocked ? t.wait + dt : 0;
+    if (t.wait > 1.2) {   // つかえたら となりの車線へ
+      for (const d of (Math.random() < .5 ? [-1, 1] : [1, -1])) {
+        const nl = t.lane + d; if (nl < -1 || nl > 1) continue;
+        if (others.some(o => o !== t && Math.abs(o.x - nl * HW_LANE) < 2 && Math.abs(o.y - t.y) < 8)) continue;
+        t.lane = nl; t.wait = 0; break;
       }
     }
+    t.x += clamp(t.lane * HW_LANE - t.x, -2.2 * dt, 2.2 * dt);
+    t.y -= t.v * dt;
   }
-  all.forEach(o => { constrainToTrack(o.position); o.position.y = 0.1; });
 }
 
-function checkLap(car, state, isPlayer) {
-  if (state.finished) return;
-  const i = nearestIdx(car.position.x, car.position.z);
-  // コース中盤を通過したらフラグを立てる
-  if (i > TRACK_N * 0.4 && i < TRACK_N * 0.6) state.passedHalf = true;
-  // スタートライン付近を「後半→前半」に通過したら1周
-  const wrapped = state.prevIdx > TRACK_N * 0.8 && i < TRACK_N * 0.2;
-  if (wrapped && state.passedHalf) {
-    state.lap++;
-    state.passedHalf = false;
-    if (isPlayer) {
-      if (state.lap >= TOTAL_LAPS) {
-        triggerGoal();
-      } else {
-        playSE('lap');
-        document.getElementById('lapNum').textContent = state.lap + 1;
-      }
+// ================================================================
+//  入力（Switchコントローラー / キーボード）
+// ================================================================
+const keys = {}, latch = {};   // latch: フレームの合間に押して離したキーも取りこぼさない
+window.addEventListener('keydown', e => { keys[e.code] = true; latch[e.code] = true; if (/Arrow|Space/.test(e.code)) e.preventDefault(); });
+window.addEventListener('keyup', e => { keys[e.code] = false; });
+const dz = v => Math.abs(v) < 0.18 ? 0 : (v - Math.sign(v) * 0.18) / 0.82;
+let padConnected = false;
+function readInput() {
+  const o = { steer: 0, acc: 0, brk: 0, horn: false, menu: false, ok: false, size: 0 };
+  if (keys.ArrowLeft || keys.KeyA) o.steer -= 1;
+  if (keys.ArrowRight || keys.KeyD) o.steer += 1;
+  if (keys.ArrowUp || keys.KeyW) o.acc = 1;
+  if (keys.ArrowDown || keys.KeyS) o.brk = 1;
+  if (keys.Space) o.horn = true;
+  if (keys.Escape || latch.Escape) o.menu = true;
+  if (keys.Enter || latch.Enter) o.ok = true;
+  latch.Escape = latch.Enter = false;
+  if (keys.BracketLeft) o.size -= 1;
+  if (keys.BracketRight) o.size += 1;
+  let found = false;
+  const pads = navigator.getGamepads ? navigator.getGamepads() : [];
+  for (const p of pads) {
+    if (!p || !p.connected) continue;
+    found = true;
+    const b = n => { const q = p.buttons[n]; return q ? (q.pressed ? 1 : (q.value || 0)) : 0; };
+    const ax = dz(p.axes[0] || 0), ay = dz(p.axes[1] || 0);
+    o.steer += ax;
+    if (b(14)) o.steer -= 1;
+    if (b(15)) o.steer += 1;
+    let up = b(12), down = b(13);
+    // 標準マッピングでないときの十字キー（ハット軸）
+    if (p.mapping !== 'standard' && p.axes.length >= 10) {
+      const k = Math.round((p.axes[9] + 1) * 3.5);
+      if (k >= 1 && k <= 3) o.steer += 1;
+      if (k >= 5 && k <= 7) o.steer -= 1;
+      if (k === 0 || k === 1 || k === 7) up = 1;
+      if (k >= 3 && k <= 5) down = 1;
     }
+    o.acc = Math.max(o.acc, b(0), b(1), b(7), up, ay < -0.5 ? 1 : 0);
+    o.brk = Math.max(o.brk, b(2), b(6), down, ay > 0.5 ? 1 : 0);
+    if (b(3) > 0.5) o.horn = true;
+    if (b(8) > 0.5 || b(9) > 0.5) o.menu = true;
+    if (b(0) > 0.5 || b(1) > 0.5) o.ok = true;
+    o.size += b(5) - b(4);
   }
-  state.prevIdx = i;
-}
-
-function getRank() {
-  // 周回数＋コース上の進み具合で順位を判定
-  const prog = s => s.lap + (s.prevIdx || 0) / TRACK_N;
-  const p = prog(playerState);
-  let rank = 1;
-  cpuStates.forEach(s => { if (prog(s) > p) rank++; });
-  return rank;
-}
-
-let timerInterval = null;
-function startTimer() {
-  raceStartTime = Date.now();
-  timerInterval = setInterval(() => {
-    if (!gameRunning) return;
-    const elapsed = Math.floor((Date.now() - raceStartTime) / 1000);
-    const m = Math.floor(elapsed / 60);
-    const s = elapsed % 60;
-    document.getElementById('timer').textContent = `${m}:${s.toString().padStart(2,'0')}`;
-  }, 500);
-}
-
-function triggerGoal() {
-  gameRunning = false;
-  playerState.finished = true;
-  stopBGM();
-  playSE('goal');
-  spawnConfetti();
-  const elapsed = Math.floor((Date.now() - raceStartTime) / 1000);
-  const m = Math.floor(elapsed / 60), s = elapsed % 60;
-  document.getElementById('finalTime').textContent = `タイム: ${m}:${s.toString().padStart(2,'0')}`;
-  document.getElementById('goalScreen').style.display = 'flex';
-}
-
-function spawnConfetti() {
-  const colors = ['#FF4444','#FFD700','#44FF44','#4488FF','#FF69B4'];
-  for (let i = 0; i < 80; i++) {
-    const el = document.createElement('div');
-    el.className = 'confetti';
-    el.style.cssText = `left:${Math.random()*100}vw;background:${colors[i%5]};animation-delay:${Math.random()*2}s;animation-duration:${2+Math.random()*2}s;`;
-    document.body.appendChild(el);
-    setTimeout(() => el.remove(), 6000);
+  o.steer = clamp(o.steer, -1, 1);
+  if (found !== padConnected) {
+    padConnected = found;
+    $('pad').className = found ? 'ok' : '';
+    $('pad').textContent = found ? '🎮 コントローラー つながったよ！ ←→でえらんで Aでスタート' : '🎮 コントローラーの ボタンを 1かい おしてね';
   }
+  return o;
 }
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
-
-async function startCountdown() {
-  const el = document.getElementById('countdown');
-  for (const text of ['3','2','1','GO！']) {
-    el.textContent = text;
-    el.style.display = 'block';
-    el.style.animation = 'none';
-    void el.offsetWidth;
-    el.style.animation = 'countPop 0.3s ease-out';
-    playSE(text === 'GO！' ? 'go' : 'count');
-    await sleep(1000);
-  }
-  el.style.display = 'none';
-  startBGM();
-  startTimer();
-  playSE('engine');
-  gameRunning = true;
-}
-
-function gameLoop() {
-  animFrameId = requestAnimationFrame(gameLoop);
-  updatePlayerCar();
-  cpuCars.forEach((car, i) => updateCPUCar(car, cpuStates[i]));
-  if (gameRunning) separateCars();
-  // スピードメーター更新（見た目用の km/h）
-  const kmh = Math.round((playerState.speed / CAR_CONFIG.maxSpeed) * 120);
-  document.getElementById('speedoNum').textContent = kmh;
-  checkLap(playerCar, playerState, true);
-  cpuCars.forEach((car, i) => checkLap(car, cpuStates[i], false));
-  document.getElementById('rank').textContent = getRank();
-  updateCamera();
-  renderer.render(scene, camera);
-}
-
-const LOW_GFX = 'ontouchstart' in window;   // スマホ/タブレットは少し軽量化
-
-function initRenderer() {
-  const W = window.innerWidth, H = window.innerHeight;
-  renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(W, H);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, LOW_GFX ? 1.5 : 2));
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;        // やわらかい影
-  renderer.toneMapping = THREE.NoToneMapping;              // 塗った色をそのまま鮮やかに出す
-  document.getElementById('race-screen').prepend(renderer.domElement);
-
-  camera = new THREE.PerspectiveCamera(65, W/H, 0.1, 500);
-  camera.position.set(60, 6, -10);
-
-  window.addEventListener('resize', () => {
-    const W2 = window.innerWidth, H2 = window.innerHeight;
-    camera.aspect = W2/H2; camera.updateProjectionMatrix();
-    renderer.setSize(W2, H2);
-  });
-}
-
-function startRace(parts) {
-  if (raceActive) return;   // 二重スタート防止
-  raceActive = true;
-  document.getElementById('coloring-screen').style.display = 'none';
-  const rs = document.getElementById('race-screen');
-  rs.style.display = 'block';
-
-  // Show touch controls on mobile
-  if ('ontouchstart' in window) {
-    document.getElementById('touchLeft').style.display = 'flex';
-    document.getElementById('touchRight').style.display = 'flex';
-  }
-
-  initRenderer();
-  buildScene(parts);
-  gameLoop();
-  startCountdown();
-}
-
-function backToColoring() {
-  stopBGM();
-  if (timerInterval) clearInterval(timerInterval);
-  gameRunning = false;
-  raceActive = false;
-  if (animFrameId) { cancelAnimationFrame(animFrameId); animFrameId = null; }
-
-  // Cleanup Three.js
-  if (renderer) { renderer.domElement.remove(); renderer.dispose(); renderer = null; }
-  scene = null; camera = null;
-  playerCar = null; cpuCars = []; cpuStates = [];
-  playerState = null;
-
-  document.getElementById('goalScreen').style.display = 'none';
-  document.getElementById('lapNum').textContent = '1';
-  document.getElementById('timer').textContent = '0:00';
-  document.getElementById('rank').textContent = '1';
-  document.getElementById('touchLeft').style.display = 'none';
-  document.getElementById('touchRight').style.display = 'none';
-
-  document.getElementById('race-screen').style.display = 'none';
-  document.getElementById('coloring-screen').style.display = 'flex';
-  drawCarTemplate();
-}
-
-// ─── Input ───
-document.addEventListener('keydown', e => {
-  // レース中は矢印(と WASD)以外のキーを無効化（5歳児がボタンを誤操作してゲームが終わるのを防ぐ）
-  if (raceActive) {
-    const allowed = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','A','d','D','w','W','s','S'];
-    if (!allowed.includes(e.key)) { e.preventDefault(); return; }
-  }
-  if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') keys.left  = true;
-  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
-  if (e.key === 'ArrowUp'    || e.key === 'w' || e.key === 'W') keys.up    = true;
-  if (e.key === 'ArrowDown'  || e.key === 's' || e.key === 'S') keys.down  = true;
-});
-document.addEventListener('keyup', e => {
-  if (e.key === 'ArrowLeft'  || e.key === 'a' || e.key === 'A') keys.left  = false;
-  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
-  if (e.key === 'ArrowUp'    || e.key === 'w' || e.key === 'W') keys.up    = false;
-  if (e.key === 'ArrowDown'  || e.key === 's' || e.key === 'S') keys.down  = false;
-});
-
-// Touch controls
-const touchL = document.getElementById('touchLeft');
-const touchR = document.getElementById('touchRight');
-touchL.addEventListener('touchstart', e => { e.preventDefault(); keys.left  = true; },  { passive: false });
-touchL.addEventListener('touchend',   e => { e.preventDefault(); keys.left  = false; }, { passive: false });
-touchR.addEventListener('touchstart', e => { e.preventDefault(); keys.right = true; },  { passive: false });
-touchR.addEventListener('touchend',   e => { e.preventDefault(); keys.right = false; }, { passive: false });
-
-// パーツごとに塗った色を取り出す（ボディ・ルーフを別々に反映）
-const PART_POINTS = {
-  car:       { body: [250, 215], roof: [250, 120] },
-  truck:     { body: [170, 175], roof: [320, 222] },
-  bus:       { body: [250, 215], roof: [250, 110] },
-  fire:      { body: [250, 205], roof: [340, 165] },
-  bulldozer: { body: [180, 210], roof: [250, 172] },
-  racecar:   { body: [200, 215], roof: [210, 170] },
-  train:     { body: [150, 210], roof: [250, 92] },
-  shinkansen:{ body: [180, 190], roof: [200, 160] },
-  bike:      { body: [235, 190], roof: [355, 195] },
-  ambulance: { body: [150, 230], roof: [250, 110] },
-  police:    { body: [100, 185], roof: [250, 120] },
-};
-function sampleColorAt(x, y) {
-  const d = cCtx.getImageData(x, y, 1, 1).data;
-  // 輪郭の黒に当たったら近くを少し探す
-  if (d[0] < 60 && d[1] < 60 && d[2] < 60) {
-    for (const [dx, dy] of [[8,0],[-8,0],[0,8],[0,-8],[14,0],[-14,0]]) {
-      const e = cCtx.getImageData(x+dx, y+dy, 1, 1).data;
-      if (!(e[0] < 60 && e[1] < 60 && e[2] < 60)) return (e[0]<<16)|(e[1]<<8)|e[2];
+// ================================================================
+//  音
+// ================================================================
+let AC = null, engOsc, engGain, engFilt;
+function initAudio() {
+  if (!opt.sound) return;
+  try {
+    if (!AC) {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      engOsc = AC.createOscillator(); engOsc.type = 'sawtooth';
+      engFilt = AC.createBiquadFilter(); engFilt.type = 'lowpass'; engFilt.frequency.value = 420;
+      engGain = AC.createGain(); engGain.gain.value = 0;
+      engOsc.connect(engFilt); engFilt.connect(engGain); engGain.connect(AC.destination); engOsc.start();
     }
-  }
-  return (d[0]<<16)|(d[1]<<8)|d[2];
+    if (AC.state === 'suspended') AC.resume();
+  } catch (e) { AC = null; }
 }
-function getParts() {
-  const p = PART_POINTS[currentVehicle] || PART_POINTS.car;
-  return { body: sampleColorAt(p.body[0], p.body[1]), roof: sampleColorAt(p.roof[0], p.roof[1]) };
+function beep(f, dur, type, vol, f2) {
+  if (!AC || !opt.sound || AC.state !== 'running') return;
+  const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(vol || 0.15, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
+  o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + dur + 0.02);
 }
+let hornT = 0, bumpT = 0;
+function bump() { if (bumpT <= 0) { beep(110, 0.18, 'square', 0.16, 50); bumpT = 0.3; } }
 
-// Start button
-document.getElementById('startBtn').addEventListener('click', (e) => {
-  e.currentTarget.blur();   // フォーカスを外してEnter/Spaceでの再実行を防ぐ
+// ================================================================
+//  ゲームの状態
+// ================================================================
+let state = 'menu', mode = 'town', started = false, time = 0;
+const car = { x: -RH / 2, y: G / 2, h: 0, v: 0, st: 0 };
+let collected = new Set(), starCount = 0;
+let parts = [], skids = [];
+let selIdx = 0, prev = { steer: 0, ok: false, menu: false };
+let wakeLock = null;
+
+function startGame(m, fromTouch) {
+  mode = m; state = 'play'; started = false; time = 0;
+  car.v = 0; car.st = 0; car.h = 0;
+  if (m === 'town') { car.x = -RH / 2; car.y = G / 2; } else { car.x = 0; car.y = 0; }
+  traffic = []; parts = []; skids = []; collected = new Set(); starCount = 0; $('starN').textContent = '0';
+  $('menu').classList.add('hide'); document.body.classList.add('play'); document.body.classList.remove('started');
   initAudio();
-  if (AC && AC.state === 'suspended') AC.resume();
-  startRace(getParts());
+  if (fromTouch) { try { const el = document.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el).catch(() => {}); } catch (e) {} }
+  try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {}); } catch (e) {}
+  layoutGuide();
+}
+function goMenu() {
+  state = 'menu'; car.v = 0;
+  $('menu').classList.remove('hide'); document.body.classList.remove('play', 'started');
+  if (engGain) engGain.gain.value = 0;
+  try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && state === 'play') { try { if (navigator.wakeLock) navigator.wakeLock.request('screen').then(l => { wakeLock = l; }).catch(() => {}); } catch (e) {} }
+  else if (engGain) engGain.gain.value = 0;
 });
 
-// Again button
-document.getElementById('againBtn').addEventListener('click', (e) => {
-  e.currentTarget.blur();
-  backToColoring();
+// 画面上の車の位置（px）と拡大率
+function view() {
+  const S = opt.carW / CAR_W, cx = W / 2, len = CAR_L * S;
+  const cy = Math.min(H * (mode === 'highway' && state === 'play' ? 0.68 : 0.56), H - len / 2 - 16), py = cy + AX * S;
+  return { S, cx, cy, py, R: Math.hypot(W / 2, Math.max(py, H - py)) / S + 1 };
+}
+function layoutGuide() {
+  const v = view(), len = CAR_L * v.S;
+  $('guide').style.top = Math.max(50, v.cy - len / 2 - 78) + 'px';
+}
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 1600); }
+
+function carPoints(x, y, h) {   // 当たり判定に使う車体の点
+  const fx = Math.sin(h), fy = -Math.cos(h), rx = Math.cos(h), ry = Math.sin(h);
+  const cx = x + fx * AX, cy = y + fy * AX, pts = [];
+  for (const a of [-2.0, 0, 2.0]) for (const b of [-0.82, 0.82]) pts.push([cx + fx * a + rx * b, cy + fy * a + ry * b]);
+  pts.push([cx + fx * 2.05, cy + fy * 2.05]);
+  return pts;
+}
+
+function update(dt) {
+  const inp = readInput();
+  time += dt; hornT -= dt; bumpT -= dt;
+  if (inp.size) { opt.carW = clamp(opt.carW + inp.size * 50 * dt, 50, Math.min(W, H) * 0.9); layoutGuide(); saveOpt.dirty = true; }
+  else if (saveOpt.dirty) { saveOpt.dirty = false; saveOpt(); }
+
+  if (state === 'menu') {
+    const dir = inp.steer > 0.6 ? 1 : inp.steer < -0.6 ? -1 : 0, pd = prev.steer > 0.6 ? 1 : prev.steer < -0.6 ? -1 : 0;
+    if (dir && dir !== pd) { selIdx = clamp(selIdx + dir, 0, 1); document.querySelectorAll('.mode').forEach((el, n) => el.classList.toggle('sel', n === selIdx)); }
+    if (inp.ok && !prev.ok) { prev.ok = true; prev.steer = inp.steer; startGame(selIdx ? 'highway' : 'town', false); return; }
+    prev.steer = inp.steer; prev.ok = inp.ok; prev.menu = inp.menu;
+    return;
+  }
+  if (inp.menu && !prev.menu) { prev.menu = true; prev.ok = inp.ok; goMenu(); return; }
+  prev.menu = inp.menu; prev.ok = inp.ok; prev.steer = inp.steer;
+
+  let acc = inp.acc, brk = inp.brk;
+  if (!started) {
+    if (acc > 0.3) { started = true; document.body.classList.add('started'); initAudio(); }
+    else { acc = 0; brk = 0; }
+  }
+  if (opt.auto && started && brk < 0.2) acc = 1;
+  if (inp.horn && hornT <= 0) { beep(420, 0.32, 'square', 0.12); beep(530, 0.32, 'square', 0.12); hornT = 0.4; }
+
+  const town = mode === 'town';
+  const fx0 = Math.sin(car.h), fy0 = -Math.cos(car.h);
+  const surf = town ? surfaceAt(car.x + fx0 * AX, car.y + fy0 * AX) : 'road';
+  const vmax = town ? (surf === 'grass' ? 4 : surf === 'walk' ? 7 : 9) : 11;
+
+  // アクセル・ブレーキ
+  if (brk > 0.05) {
+    if (car.v > 0.05) car.v = Math.max(0, car.v - brk * 13 * dt);
+    else if (town) car.v -= brk * 4 * dt; else car.v = 0;
+  } else if (acc > 0.05) {
+    car.v += (car.v < 0 ? 14 : acc * 6) * dt;
+  } else {
+    car.v -= Math.sign(car.v) * Math.min(Math.abs(car.v), 2.5 * dt);
+  }
+  if (car.v > vmax) car.v -= Math.min(car.v - vmax, 10 * dt);
+  car.v = Math.max(car.v, town ? -3 : 0);
+
+  // ハンドル
+  car.st += (inp.steer - car.st) * Math.min(1, dt * 8);
+  const ox = car.x, oy = car.y, oh = car.h;
+  if (town) car.h += car.v * car.st * 0.24 / (1 + Math.abs(car.v) / 14) * dt;
+  else car.h += (car.st * 0.24 * Math.min(1, car.v / 3) - car.h) * Math.min(1, dt * 5);
+  car.x += Math.sin(car.h) * car.v * dt; car.y -= Math.cos(car.h) * car.v * dt;
+
+  if (town) {
+    if (carPoints(car.x, car.y, car.h).some(p => solidAt(p[0], p[1]))) {
+      car.x = ox; car.y = oy; car.h = oh;
+      if (Math.abs(car.v) > 1) bump();
+      car.v = -car.v * 0.3;
+    }
+  } else {
+    const lim = HW_RAIL - 1.05;
+    if (Math.abs(car.x) > lim) { car.x = Math.sign(car.x) * lim; car.h *= 0.8; car.v *= (1 - 0.6 * dt); if (car.v > 3) spark(); }
+    const ccx = car.x + Math.sin(car.h) * AX, ccy = car.y - Math.cos(car.h) * AX;
+    updateTraffic(dt, ccx, ccy);
+    for (const t of traffic) {
+      const dx = ccx - t.x, dy = ccy - t.y;
+      if (Math.abs(dx) < 1.8 && Math.abs(dy) < 4.15) {
+        if (Math.abs(dy) > 3.3 || Math.abs(dx) < 0.6) {
+          if (dy > 0) { car.y += 4.15 - dy; if (car.v > t.v + 1) bump(); car.v = Math.min(car.v, t.v * 0.7); }
+          else { t.y += 4.15 + dy; t.v = Math.min(t.v, car.v); }
+        } else { car.x += Math.sign(dx) * (1.8 - Math.abs(dx)); car.h *= 0.5; car.v *= 0.97; bump(); }
+      }
+    }
+  }
+
+  // 星あつめ
+  const fx = Math.sin(car.h), fy = -Math.cos(car.h), ccx = car.x + fx * AX, ccy = car.y + fy * AX;
+  const pick = (key, sx, sy) => {
+    if (collected.has(key)) return;
+    const dx = sx - ccx, dy = sy - ccy, a = dx * fx + dy * fy, b = dx * fy - dy * fx;
+    if (Math.abs(a) < 2.5 && Math.abs(b) < 1.4) {
+      collected.add(key); starCount++; $('starN').textContent = starCount;
+      beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
+      for (let n = 0; n < 8; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.5, max: 0.5, r: 0.16, col: '255,216,46' });
+      if (starCount % 10 === 0) toast('⭐ ' + starCount + 'こ あつめた！ すごい！');
+    }
+  };
+  if (town) townStars(ccx, ccy, 4, pick); else highwayStars(ccy, 4, pick);
+
+  // けむり・土ぼこり・タイヤのあと
+  const rx = Math.cos(car.h), ry = Math.sin(car.h), sp = Math.abs(car.v);
+  if (sp > 1 && Math.random() < dt * (surf === 'grass' ? 30 : acc > 0.5 && sp < 6 ? 14 : 3)) {
+    const s = Math.random() < .5 ? -1 : 1;
+    parts.push({ x: car.x + rx * 0.7 * s - fx * 0.9, y: car.y + ry * 0.7 * s - fy * 0.9, vx: -fx * 1.2 + (Math.random() - .5), vy: -fy * 1.2 + (Math.random() - .5), life: 0.6, max: 0.6, r: 0.15, col: surf === 'grass' ? '150,120,70' : '235,235,235' });
+  }
+  if (town && sp > 6.5 && Math.abs(car.st) > 0.9 && surf !== 'grass') {
+    for (const s of [-1, 1]) skids.push({ x: car.x + rx * 0.8 * s, y: car.y + ry * 0.8 * s, px: ox + Math.cos(oh) * 0.8 * s, py: oy + Math.sin(oh) * 0.8 * s, life: 6 });
+    if (skids.length > 400) skids.splice(0, skids.length - 400);
+  }
+  for (const p of parts) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  parts = parts.filter(p => p.life > 0);
+  for (const s of skids) s.life -= dt;
+  if (skids.length && skids[0].life <= 0) skids = skids.filter(s => s.life > 0);
+
+  // エンジン音
+  if (AC && engGain) {
+    const on = opt.sound && started;
+    engOsc.frequency.value = 52 + sp * 13 + (acc > 0.1 ? 12 : 0);
+    engFilt.frequency.value = 300 + sp * 60;
+    engGain.gain.value = on ? 0.025 + Math.min(0.045, sp * 0.004) + (acc > 0.1 ? 0.012 : 0) : 0;
+  }
+}
+function spark() {
+  if (Math.random() < .4) parts.push({ x: car.x + Math.sign(car.x) * 0.95, y: car.y - AX + (Math.random() - .5) * 3, vx: -Math.sign(car.x) * 2, vy: 4 + Math.random() * 3, life: 0.25, max: 0.25, r: 0.1, col: '255,200,80' });
+}
+
+// ================================================================
+//  描画
+// ================================================================
+function render() {
+  const v = view();
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.fillStyle = '#5b6068'; ctx.fillRect(0, 0, W, H);
+
+  // 世界: 車（後輪の軸）を中心に、進む向きが上になるように回す
+  ctx.save();
+  ctx.translate(v.cx, v.py); ctx.rotate(-car.h); ctx.scale(v.S, v.S); ctx.translate(-car.x, -car.y);
+  if (mode === 'town') drawTown(ctx, car.x, car.y, v.R); else drawHighway(ctx, car.x, car.y, v.R);
+
+  ctx.lineWidth = 0.2;
+  for (const s of skids) { ctx.strokeStyle = 'rgba(20,20,20,' + (Math.min(1, s.life / 3) * 0.16) + ')'; ctx.beginPath(); ctx.moveTo(s.px, s.py); ctx.lineTo(s.x, s.y); ctx.stroke(); }
+  ctx.lineCap = 'butt';
+
+  const star = (key, x, y) => { if (!collected.has(key)) drawStar(ctx, x, y, 0.6, time + x * 0.3 + y * 0.2); };
+  if (mode === 'town') townStars(car.x, car.y, v.R, star); else highwayStars(car.y, v.R, star);
+
+  for (const t of traffic) { ctx.save(); ctx.translate(t.x, t.y); ctx.rotate((t.lane * HW_LANE - t.x) * 0.12); drawCarShape(ctx, t.col); ctx.restore(); }
+  for (const p of parts) { const a = p.life / p.max; ctx.fillStyle = 'rgba(' + p.col + ',' + (a * 0.45) + ')'; circle(ctx, p.x, p.y, p.r * (1.6 - a * 0.6)); ctx.fill(); }
+  if (mode === 'highway') drawGantries(ctx, car.y, v.R);
+  ctx.restore();
+
+  // 車の位置（ミニカーを置く場所）
+  ctx.save(); ctx.translate(v.cx, v.cy); ctx.scale(v.S, v.S);
+  if (opt.virtual) drawCarShape(ctx, '#e8483f');
+  else {
+    ctx.fillStyle = 'rgba(0,0,0,.14)'; rr(ctx, -1.12, -2.3, 2.24, 4.75, 0.8); ctx.fill();
+    ctx.fillStyle = 'rgba(0,0,0,.22)'; rr(ctx, -0.98, -2.18, 1.96, 4.42, 0.65); ctx.fill();
+  }
+  ctx.restore();
+  // こうそく: 画面の先にいる車を「！」でおしらせ
+  if (mode === 'highway' && state === 'play') {
+    const ccx = car.x + Math.sin(car.h) * AX, ccy = car.y - Math.cos(car.h) * AX;
+    for (const t of traffic) {
+      const dy = ccy - t.y, sy = v.cy - dy * v.S;
+      if (dy < 0 || dy > 16 || sy > -CAR_L * v.S * 0.3 || t.v > car.v) continue;
+      const sx = clamp(v.cx + (t.x - ccx) * v.S, 30, W - 30), a = 0.55 + Math.sin(time * 14) * 0.45;
+      ctx.fillStyle = 'rgba(255,70,50,' + a + ')'; ctx.beginPath(); ctx.moveTo(sx, 58); ctx.lineTo(sx + 26, 104); ctx.lineTo(sx - 26, 104); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold 30px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('!', sx, 86);
+    }
+  }
+  ctx.save(); ctx.translate(v.cx, v.cy); ctx.scale(v.S, v.S);
+  if (state === 'play' && !started) {
+    const pulse = 0.6 + Math.sin(time * 5) * 0.4;
+    ctx.lineWidth = 0.1; ctx.setLineDash([0.35, 0.25]); ctx.lineDashOffset = -time * 1.2;
+    ctx.strokeStyle = 'rgba(255,255,255,' + (0.55 + pulse * 0.45) + ')';
+    rr(ctx, -CAR_W / 2, -CAR_L / 2, CAR_W, CAR_L, 0.5); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(255,255,255,' + (0.5 + pulse * 0.4) + ')';   // 前はこっち、の矢印
+    ctx.beginPath(); ctx.moveTo(0, -CAR_L / 2 - 0.75); ctx.lineTo(0.45, -CAR_L / 2 - 0.22); ctx.lineTo(-0.45, -CAR_L / 2 - 0.22); ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+}
+
+let last = 0;
+function frame(t) {
+  const dt = Math.min(0.05, (t - last) / 1000 || 0); last = t;
+  update(dt); render();
+  requestAnimationFrame(frame);
+}
+
+// ================================================================
+//  メニューとボタン
+// ================================================================
+document.querySelectorAll('.mode').forEach((el, n) => el.addEventListener('click', () => { selIdx = n; startGame(el.dataset.mode, true); }));
+document.querySelectorAll('.opt').forEach(el => {
+  const k = el.dataset.opt; el.classList.toggle('on', !!opt[k]);
+  el.addEventListener('click', () => { opt[k] = !opt[k]; el.classList.toggle('on', opt[k]); saveOpt(); if (k === 'sound' && opt.sound) initAudio(); });
 });
+// メニューへは長押しで（ミニカーの誤タッチで戻らないように）
+(() => {
+  const b = $('btnMenu'); let timer = null;
+  const cancel = () => { clearTimeout(timer); timer = null; b.classList.remove('hold'); };
+  b.addEventListener('pointerdown', e => { e.preventDefault(); b.classList.add('hold'); timer = setTimeout(() => { cancel(); goMenu(); }, 700); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, cancel));
+})();
+const resizeCar = d => { opt.carW = clamp(opt.carW + d, 50, Math.min(W, H) * 0.9); saveOpt(); layoutGuide(); };
+$('szm').addEventListener('click', () => resizeCar(-6));
+$('szp').addEventListener('click', () => resizeCar(6));
+// 走行中はスクロールやズームをさせない
+document.addEventListener('touchmove', e => { if (state === 'play') e.preventDefault(); }, { passive: false });
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('pointerdown', () => { if (state === 'play') initAudio(); });
+window.addEventListener('gamepadconnected', () => {});   // 一部ブラウザはこのリスナーがないとパッドを報告しない
+
+resize();
+buildPatterns();
+requestAnimationFrame(frame);
 </script>
 </body>
 </html>
