@@ -121,6 +121,19 @@ body.play.tui:not(.padon) #touch { display: flex; }
 body.play.tui:not(.padon) #btnHorn { display: block; }
 body.tui #sizer div { display: none; }
 body.tui #sizer button { padding: 10px 14px; font-size: 14px; }
+#sigHud {
+  position: fixed; z-index: 5; right: 10px; top: max(58px, calc(env(safe-area-inset-top) + 50px)); display: none;   /* みぎがわ: 道の信号（ひだり）と かさならない */
+  width: max-content; padding: 10px 14px 11px; border-radius: 18px; background: rgba(20,24,30,.82); border: 3px solid #666; pointer-events: none;
+}
+#sigHud.show { display: block; }
+body:not(.started) #sigHud { display: none !important; }   /* スタートするまでは出さない（案内文と重なるため）*/
+#sigHud .lamps { display: flex; gap: 10px; }
+#sigHud .lamps i { width: 38px; height: 38px; border-radius: 50%; background: #3a3f48; }
+#sigHud .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.2); margin-top: 8px; overflow: hidden; }
+#sigBar { display: block; height: 100%; background: #fff; }
+#sigHud.red { border-color: #ff3b30; } #sigHud.red .lamps i:nth-child(3) { background: #ff3b30; box-shadow: 0 0 12px #ff3b30; }
+#sigHud.yellow { border-color: #ffcc00; } #sigHud.yellow .lamps i:nth-child(2) { background: #ffcc00; box-shadow: 0 0 12px #ffcc00; }
+#sigHud.green { border-color: #34c759; } #sigHud.green .lamps i:nth-child(1) { background: #34c759; box-shadow: 0 0 12px #34c759; }
 #toast {
   position: fixed; z-index: 6; left: 50%; top: 16%; transform: translate(-50%, 0) scale(.6);
   background: #ffd23f; color: #3a2a00; border-radius: 999px; padding: 10px 22px; font-size: 20px;
@@ -174,7 +187,7 @@ body.tui #sizer button { padding: 10px 14px; font-size: 14px; }
       <li>コントローラーがない場合はキーボード（矢印キー / スペース）でも動かせます。</li>
     </ul>
   </details>
-  <div id="ver">v3 ・ ミニカードライブ</div>
+  <div id="ver">v4 ・ ミニカードライブ</div>
 </div>
 
 <div id="stars" class="hud">⭐ <span id="starN">0</span></div>
@@ -186,6 +199,7 @@ body.tui #sizer button { padding: 10px 14px; font-size: 14px; }
   <div class="grp r"><button class="tb brk" data-k="brk">ブレーキ</button><button class="tb acc" data-k="acc">アクセル</button></div>
 </div>
 <button id="btnHorn" data-k="horn">📢</button>
+<div id="sigHud"><div class="lamps"><i></i><i></i><i></i></div><div class="bar"><span id="sigBar"></span></div></div>
 <div id="toast"></div>
 
 <script>
@@ -453,24 +467,15 @@ function drawBlock(c, b) {
     }
   }
 }
-// 信号: 交差点ごとに少しずつずらして、たてとよこが交互に青になる（青8秒・黄2秒・赤のこり）
-const SIG_T = 22;
-function sigState(i, j, axis) {
+// 信号: 交差点ごとに少しずつずらして、たてとよこが交互に青になる（青8秒・黄2秒・そのあと両方赤で1秒）
+const SIG_T = 22, SIG_G = 8, SIG_Y = 2;
+function sigInfo(i, j, axis) {   // いまの色と、その色が あと何秒つづくか
   const u = (((time + hash(i, j, 61) * SIG_T + axis * SIG_T / 2) % SIG_T) + SIG_T) % SIG_T;
-  return u < 8 ? 'green' : u < 10 ? 'yellow' : 'red';
+  if (u < SIG_G) return { s: 'green', left: SIG_G - u, tot: SIG_G };
+  if (u < SIG_G + SIG_Y) return { s: 'yellow', left: SIG_G + SIG_Y - u, tot: SIG_Y };
+  return { s: 'red', left: SIG_T - u, tot: SIG_T - SIG_G - SIG_Y };
 }
-function drawSignalHead(c, st) {   // 歩道に立つ信号（上から見た形）。うえ=あか・まんなか=き・した=あお
-  c.save();
-  c.fillStyle = 'rgba(0,0,0,.25)'; rr(c, RH + 0.2, -RH - 5.75, 1.0, 3.1, 0.35); c.fill();
-  c.fillStyle = '#2b2f36'; rr(c, RH + 0.1, -RH - 5.9, 1.0, 3.1, 0.35); c.fill();
-  const cols = [['red', '#ff3b30', '#5a2a2a'], ['yellow', '#ffcc00', '#5a5226'], ['green', '#34c759', '#1f4a2b']];
-  for (let n = 0; n < 3; n++) {
-    const on = cols[n][0] === st, ly = -RH - 5.9 + 0.62 + n * 0.93;
-    if (on) { c.fillStyle = 'rgba(255,255,255,.22)'; circle(c, RH + 0.6, ly, 0.78); c.fill(); }
-    c.fillStyle = on ? cols[n][1] : cols[n][2]; circle(c, RH + 0.6, ly, 0.36); c.fill();
-  }
-  c.restore();
-}
+function sigState(i, j, axis) { return sigInfo(i, j, axis).s; }
 function drawTown(c, x, y, R) {
   c.fillStyle = pat.asphalt; c.fillRect(x - R, y - R, 2 * R, 2 * R);
   const i0 = Math.floor((x - R) / G), i1 = Math.floor((x + R) / G), j0 = Math.floor((y - R) / G), j1 = Math.floor((y + R) / G);
@@ -483,9 +488,8 @@ function drawTown(c, x, y, R) {
       c.fillStyle = 'rgba(255,255,255,.9)';
       for (let q = -RH + 0.35; q < RH - 0.5; q += 0.92) c.fillRect(q, -RH - 1.9, 0.5, 1.6);   // 横断歩道
       const st = sigState(i, j, a & 1);
-      c.fillStyle = st === 'red' ? 'rgba(255,70,60,.95)' : 'rgba(255,255,255,.9)';
-      c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);
-      drawSignalHead(c, st);                                           // 停止線
+      c.fillStyle = st === 'red' ? 'rgba(255,70,60,.95)' : st === 'yellow' ? 'rgba(255,204,0,.95)' : 'rgba(70,220,120,.95)';
+      c.fillRect(0.1, -RH - 2.45, RH - 0.3, 0.28);                                           // 停止線
       c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.14; c.setLineDash([1.4, 1.4]);
       c.beginPath(); c.moveTo(0, -RH - 2.8); c.lineTo(0, -G / 2); c.stroke(); c.setLineDash([]);  // センターライン
       if (hash(i, j, a) < .45) { c.fillStyle = 'rgba(40,42,48,.55)'; circle(c, (hash(i, j, a + 9) < .5 ? -1 : 1) * 1.3, -G / 2 + 1.5 + hash(i, j, a + 5) * 3, 0.42); c.fill(); c.strokeStyle = 'rgba(160,165,172,.6)'; c.lineWidth = 0.06; c.stroke(); }
@@ -571,7 +575,7 @@ function updateTraffic(dt, cx, cy) {
     const lane = ((Math.random() * 3) | 0) - 1, ahead = car.v > 6 || Math.random() < .3;
     const y = cy + (ahead ? -1 : 1) * (26 + Math.random() * 16);
     if (!traffic.some(t => t.lane === lane && Math.abs(t.y - y) < 9))
-      traffic.push({ lane, x: lane * HW_LANE, y, v: 3.2 + Math.random() * 2, base: 0, col: COLORS[(Math.random() * COLORS.length) | 0], wait: 0 });
+      traffic.push({ lane, x: lane * HW_LANE, y, v: 2.6 + Math.random() * 1.6, base: 0, col: COLORS[(Math.random() * COLORS.length) | 0], wait: 0 });
   }
   for (const t of traffic) {
     if (!t.base) t.base = t.v;
@@ -691,7 +695,7 @@ let wakeLock = null, touchUI = false;
 
 function startGame(m, fromTouch) {
   mode = m; state = 'play'; started = false; time = 0;
-  car.v = 0; car.st = 0; car.h = 0; bounceT = 0; zoneP = null; waitI.ok = false; waitI.t = 0; redT = 0;
+  car.v = 0; car.st = 0; car.h = 0; bounceT = 0; zoneP = null; waitI.ok = false; waitI.t = 0; redT = 0; showSig(null);
   if (m === 'town') { car.x = -RH / 2; car.y = G / 2; } else { car.x = 0; car.y = 0; }
   traffic = []; parts = []; skids = []; collected = new Set(); starCount = 0; $('starN').textContent = '0';
   $('menu').classList.add('hide'); document.body.classList.add('play'); document.body.classList.remove('started');
@@ -705,7 +709,7 @@ function startGame(m, fromTouch) {
 function goMenu() {
   state = 'menu'; car.v = 0;
   $('menu').classList.remove('hide'); document.body.classList.remove('play', 'started', 'tui');
-  Object.keys(ui).forEach(k => ui[k] = 0); document.querySelectorAll('.tb.on, #btnHorn.on').forEach(e => e.classList.remove('on')); layoutGuide();
+  showSig(null); Object.keys(ui).forEach(k => ui[k] = 0); document.querySelectorAll('.tb.on, #btnHorn.on').forEach(e => e.classList.remove('on')); layoutGuide();
   if (engGain) engGain.gain.value = 0;
   try { if (wakeLock) { wakeLock.release(); wakeLock = null; } } catch (e) {}
 }
@@ -765,14 +769,14 @@ function update(dt) {
   const town = mode === 'town';
   const fx0 = Math.sin(car.h), fy0 = -Math.cos(car.h);
   const surf = town ? surfaceAt(car.x + fx0 * AX, car.y + fy0 * AX) : 'road';
-  const vmax = town ? (surf === 'grass' ? 2.8 : surf === 'walk' ? 4.5 : 6) : 7.5;
+  const vmax = town ? (surf === 'grass' ? 2.3 : surf === 'walk' ? 3.6 : 4.8) : 6;
 
   // アクセル・ブレーキ
   if (brk > 0.05) {
     if (car.v > 0.05) car.v = Math.max(0, car.v - brk * 13 * dt);
     else if (town) car.v -= brk * 4 * dt; else car.v = 0;
   } else if (acc > 0.05) {
-    car.v += (car.v < 0 ? 14 : acc * 4.5) * dt;
+    car.v += (car.v < 0 ? 14 : acc * 3.8) * dt;
   } else {
     car.v -= Math.sign(car.v) * Math.min(Math.abs(car.v), 2.5 * dt);
   }
@@ -817,7 +821,6 @@ function update(dt) {
       collected.add(key); starCount++; $('starN').textContent = starCount;
       beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
       for (let n = 0; n < 8; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.5, max: 0.5, r: 0.16, col: '255,216,46' });
-      if (starCount % 10 === 0) toast('⭐ ' + starCount + 'こ あつめた！ すごい！');
     }
   };
   if (town) townStars(ccx, ccy, 4, pick); else highwayStars(ccy, 4, pick);
@@ -825,11 +828,11 @@ function update(dt) {
 
   // けむり・土ぼこり・タイヤのあと
   const rx = Math.cos(car.h), ry = Math.sin(car.h), sp = Math.abs(car.v);
-  if (sp > 1 && Math.random() < dt * (surf === 'grass' ? 30 : acc > 0.5 && sp < 4 ? 14 : 3)) {
+  if (sp > 1 && Math.random() < dt * (surf === 'grass' ? 30 : acc > 0.5 && sp < 3.2 ? 14 : 3)) {
     const s = Math.random() < .5 ? -1 : 1;
     parts.push({ x: car.x + rx * 0.7 * s - fx * 0.9, y: car.y + ry * 0.7 * s - fy * 0.9, vx: -fx * 1.2 + (Math.random() - .5), vy: -fy * 1.2 + (Math.random() - .5), life: 0.6, max: 0.6, r: 0.15, col: surf === 'grass' ? '150,120,70' : '235,235,235' });
   }
-  if (town && sp > 4.2 && Math.abs(car.st) > 0.9 && surf !== 'grass') {
+  if (town && sp > 3.4 && Math.abs(car.st) > 0.9 && surf !== 'grass') {
     for (const s of [-1, 1]) skids.push({ x: car.x + rx * 0.8 * s, y: car.y + ry * 0.8 * s, px: ox + Math.cos(oh) * 0.8 * s, py: oy + Math.sin(oh) * 0.8 * s, life: 6 });
     if (skids.length > 400) skids.splice(0, skids.length - 400);
   }
@@ -846,22 +849,26 @@ function update(dt) {
     engGain.gain.value = on ? 0.025 + Math.min(0.045, sp * 0.004) + (acc > 0.1 ? 0.012 : 0) : 0;
   }
 }
-let zoneP = null, waitI = { i: 0, j: 0, t: 0, ok: false }, redT = 0;
-function awardStar(sx, sy, msg) {
+let zoneP = null, waitI = { i: 0, j: 0, t: 0, ok: false }, redT = 0, sigLast = '';
+function showSig(inf) {   // 画面のすみの大きな信号（まえの交差点が ちかづいたら でる）
+  const el = $('sigHud');
+  if (!inf) { if (sigLast) { el.className = ''; sigLast = ''; } return; }
+  if (inf.s !== sigLast) { sigLast = inf.s; el.className = 'show ' + inf.s; }
+  $('sigBar').style.width = (inf.left / inf.tot * 100).toFixed(0) + '%';
+}
+function awardStar(sx, sy) {
   starCount++; $('starN').textContent = starCount;
   beep(880, 0.12, 'sine', 0.14); setTimeout(() => beep(1320, 0.2, 'sine', 0.14), 90);
   for (let n = 0; n < 10; n++) parts.push({ x: sx, y: sy, vx: (Math.random() - .5) * 6, vy: (Math.random() - .5) * 6, life: 0.6, max: 0.6, r: 0.18, col: '255,216,46' });
-  toast(msg);
 }
-// 信号のルール: 赤で止まって待って青で進むと⭐。赤で進んでも罰はなく、おしらせだけ。
+// 信号のルール: 赤で止まって待って青で進むと⭐。赤で進んでも罰も通知もない。
 function trafficRules(dt, cx, cy, fx, fy) {
   redT -= dt;
   const ii = Math.round(cx / G), jj = Math.round(cy / G), lx = cx - ii * G, ly = cy - jj * G;
   const inside = Math.abs(lx) < RH && Math.abs(ly) < RH;
   if (inside && zoneP && !zoneP.inside && zoneP.i === ii && zoneP.j === jj) {
     const s = sigState(ii, jj, Math.abs(zoneP.lx) > Math.abs(zoneP.ly) ? 1 : 0);
-    if (waitI.ok && waitI.i === ii && waitI.j === jj && s === 'green') awardStar(cx, cy, '🚦 まてたね！ えらい！ ⭐');
-    else if (s === 'red' && car.v > 1 && redT <= 0) { toast('🚦 あかだよ！ とまろうね'); beep(300, 0.25, 'square', 0.1, 200); redT = 3; }
+    if (waitI.ok && waitI.i === ii && waitI.j === jj && s === 'green') awardStar(cx, cy);
     waitI.ok = false; waitI.t = 0;
   }
   zoneP = { i: ii, j: jj, lx, ly, inside };
@@ -873,6 +880,12 @@ function trafficRules(dt, cx, cy, fx, fy) {
   }
   if (waiting) { waitI.t += dt; if (waitI.t > 0.8) { waitI.ok = true; waitI.i = ii; waitI.j = jj; } }
   else { waitI.t = 0; if (Math.hypot(lx, ly) > RH + 9) waitI.ok = false; }
+  let hud = null;
+  if (!inside) {
+    const ax2 = Math.abs(lx) < RH && Math.abs(ly) > RH ? 0 : Math.abs(ly) < RH && Math.abs(lx) > RH ? 1 : -1, d2 = Math.hypot(lx, ly) || 1;
+    if (ax2 >= 0 && (fx * -lx + fy * -ly) / d2 > 0.5) hud = sigInfo(ii, jj, ax2);
+  }
+  showSig(hud);
 }
 function spark() {
   if (Math.random() < .4) parts.push({ x: car.x + Math.sign(car.x) * 0.95, y: car.y - AX + (Math.random() - .5) * 3, vx: -Math.sign(car.x) * 2, vy: 4 + Math.random() * 3, life: 0.25, max: 0.25, r: 0.1, col: '255,200,80' });
