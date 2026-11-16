@@ -113,7 +113,7 @@ body.play.tui:not(.padon) #touch { display: flex; }
 .tb.brk { background: rgba(232,72,63,.5); font-size: 16px; }
 .tb.on { background: rgba(255,210,63,.85); color: #3a2a00; transform: scale(.95); }
 #btnHorn {
-  position: fixed; z-index: 5; top: max(8px, env(safe-area-inset-top)); left: 112px; display: none;
+  position: fixed; z-index: 5; top: max(8px, env(safe-area-inset-top)); left: 124px; display: none;
   width: 44px; height: 44px; border-radius: 50%; border: 0; font-size: 22px; padding: 0;
   background: rgba(0,0,0,.45); touch-action: none; -webkit-user-select: none; user-select: none;
 }
@@ -219,7 +219,7 @@ function resize() {
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth; H = window.innerHeight;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
-  if (!opt.carW) opt.carW = Math.min(175, Math.min(W, H) * 0.55);
+  if (!opt.carW) opt.carW = Math.min(175, Math.min(W, H) * 0.55, opt.touch ? Math.max(90, (H - 358) * CAR_W / CAR_L) : 999);   // 画面が低いときは、ボタンの場所を残すため枠を小さめに
   layoutGuide();
 }
 window.addEventListener('resize', resize);
