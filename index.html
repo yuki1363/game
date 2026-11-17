@@ -1405,10 +1405,10 @@ const NEWB = [
     for (const sx of [-1, 1]) { v.box(sx * 4, sx * 4, 0, 2, -4, -4, K.brown); v.disc(sx * 4, -4, 1, 3, K.leaf); } v.set(0, 6, 0, K.gold); }],
   // ───── レジャー・のりもの ─────
   ['かんらんしゃ', '🎡', v => {
-    for (let d = 0; d < 360; d += 6) { const a = d * Math.PI / 180, x = Math.round(5 * Math.cos(a)), y = 6 + Math.round(5 * Math.sin(a)); v.set(x, y, 0, K.red); }
-    for (let d = 0; d < 360; d += 45) { const a = d * Math.PI / 180; for (let r = 1; r <= 4; r++) v.set(Math.round(r * Math.cos(a)), 6 + Math.round(r * Math.sin(a)), 0, K.white); }
-    for (let d = 0; d < 360; d += 45) { const a = d * Math.PI / 180, x = Math.round(5 * Math.cos(a)), y = 6 + Math.round(5 * Math.sin(a)); const gc = [K.yellow, K.blue, K.green, K.pink, K.orange, K.purple, K.red, K.white][d / 45]; v.box(x, x, y - 1, y - 1, -1, 1, gc); v.box(x, x, y - 2, y - 2, -1, 1, gc); }
-    v.box(0, 0, 6, 6, -1, 1, K.gold); for (let y = 0; y <= 6; y++) { const lx = Math.round(3 - y * 0.45); for (const z of [-1, 1]) { v.set(lx, y, z, K.dgray); v.set(-lx, y, z, K.dgray); } } v.box(-4, 4, 0, 0, -2, 2, K.concrete); v.box(-1, 1, 1, 1, 2, 4, K.gray); }],
+    for (let d = 0; d < 360; d += 6) { const a = d * Math.PI / 180, x = Math.round(5 * Math.cos(a)), y = 7 + Math.round(5 * Math.sin(a)); v.set(x, y, 0, K.red); }
+    for (let d = 0; d < 360; d += 45) { const a = d * Math.PI / 180; for (let r = 1; r <= 4; r++) v.set(Math.round(r * Math.cos(a)), 7 + Math.round(r * Math.sin(a)), 0, K.white); }
+    for (let d = 0; d < 360; d += 45) { const a = d * Math.PI / 180, x = Math.round(5 * Math.cos(a)), y = 7 + Math.round(5 * Math.sin(a)); const gc = [K.yellow, K.blue, K.green, K.pink, K.orange, K.purple, K.red, K.white][d / 45]; v.box(x, x, y - 1, y - 1, -1, 1, gc); v.box(x, x, y - 2, y - 2, -1, 1, gc); }
+    v.box(0, 0, 7, 7, -1, 1, K.gold); for (let y = 0; y <= 7; y++) { const lx = Math.round(3 - y * 0.4); for (const z of [-1, 1]) { v.set(lx, y, z, K.dgray); v.set(-lx, y, z, K.dgray); } } v.box(-4, 4, 0, 0, -2, 2, K.concrete); v.box(-1, 1, 1, 1, 2, 4, K.gray); }],
   ['メリーゴーラウンド', '🎠', v => {
     v.disc(0, 0, 4, 0, K.gold); v.disc(0, 0, 4, 1, K.wood); v.box(0, 0, 1, 6, 0, 0, K.gold);
     const hs = [K.white, K.pink, K.yellow, K.blue, K.green, K.orange]; [[3, 0], [-3, 0], [0, 3], [0, -3], [2, 2], [-2, -2], [2, -2], [-2, 2]].forEach(([x, z], i) => { v.box(x, x, 2, 4, z, z, K.gold); v.set(x, 3, z, hs[i % 6]); v.set(x, 2, z, hs[(i + 2) % 6]); });
@@ -1666,7 +1666,8 @@ function bInit() {
   const clouds = []; const cm = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.92, fog: false });
   for (let i = 0; i < 9; i++) { const c = new THREE.Mesh(new THREE.BoxGeometry(6 + (i % 3) * 3, 1.6, 3.5 + (i % 2) * 2), cm); c.position.set(-100 + i * 24, 40 + (i % 3) * 3, -80 + ((i * 53) % 160)); sc.add(c); clouds.push(c); }
   B.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshLambertMaterial({ map: blockTex }), BMAX);
-  B.mesh.frustumCulled = false; sc.add(B.mesh); B.m4 = new THREE.Matrix4(); B.colors = BCOL.map(c => new THREE.Color(c || '#ffffff'));
+  // いろの はこを さいしょに つくっておく（0こで つくると、あとから なにも いろが つかない）
+  B.mesh.frustumCulled = false; B.mesh.setColorAt(0, new THREE.Color(1, 1, 1)); sc.add(B.mesh); B.m4 = new THREE.Matrix4(); B.colors = BCOL.map(c => new THREE.Color(c || '#ffffff'));
   // キャラクター（ブロックの ひと）
   const av = new THREE.Group(), M = c => new THREE.MeshLambertMaterial({ color: c });
   const faceTex = tex(g => { g.fillStyle = '#ffd34d'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#222'; g.fillRect(16, 20, 8, 12); g.fillRect(40, 20, 8, 12); g.strokeStyle = '#222'; g.lineWidth = 4; g.beginPath(); g.arc(32, 36, 14, 0.25, Math.PI - 0.25); g.stroke(); });
@@ -1772,7 +1773,7 @@ function bStep(dt, I) {
   if (B.saveAt && performance.now() > B.saveAt) { B.saveAt = 0; bSave(); }
 }
 function bRebuild() {
-  let n = 0; const m4 = B.m4, mesh = B.mesh, S = BN * BN;
+  let n = 0; const m4 = B.m4, mesh = B.mesh, S = BN * BN; mesh.count = BMAX;
   for (const i of B.occ) {
     const c = BW[i], x = i % BN, z = Math.floor(i / BN) % BN, y = Math.floor(i / S);
     if (y > 0 && x > 0 && x < BN - 1 && z > 0 && z < BN - 1 && y < BH - 1 && BW[i - 1] && BW[i + 1] && BW[i - BN] && BW[i + BN] && BW[i - S] && BW[i + S]) continue;   // かこまれた ブロックは かかない
