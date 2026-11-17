@@ -333,7 +333,8 @@ function genBlock(i, j) {
   const tree = (x, y, rad) => { it.push({ k: 'tree', x, y, r: rad }); so.push({ x, y, r: rad * 0.72 }); };
   const parked = (x, y, up) => { it.push({ k: 'car', x, y, rot: up ? 0 : Math.PI, col: COLORS[(r() * COLORS.length) | 0] }); so.push({ x: x - 0.9, y: y - 2.1, w: 1.8, h: 4.2 }); };
   const spaces = (y, d, p) => {
-    const n = 5, w = B / n; it.push({ k: 'spaces', x: x0, y, n, w, d });
+    // 1わく: はば 約4.3m × ふかさ 5.6m（くるま 1.8m × 4.2m に ゆとり）。くるまの まがる大きさ(約4m)を考えて、わくは 3つ・かたがわだけ
+    const n = 3, w = B / n; it.push({ k: 'spaces', x: x0, y, n, w, d });
     for (let s = 0; s < n; s++) if (r() < p) parked(x0 + w * (s + .5), y + d / 2, r() < .5);
   };
   if (b.type === 'houses') {
@@ -364,13 +365,14 @@ function genBlock(i, j) {
       placed.push({ x, y }); tree(x, y, rad);
     }
   } else if (b.type === 'lot') {
-    spaces(y0 + 0.15, 4.6, .55); spaces(y0 + B - 4.75, 4.6, .55);
-    it.push({ k: 'psign', x: x0 + 1.3, y: y0 + B / 2 });   // 「P」の ひょうしき
+    const top = r() < .5;   // わくは うえか したの かたがわだけ。はんたいがわは まがりやすい ひろい あきち
+    spaces(top ? y0 + 0.15 : y0 + B - 5.75, 5.6, .5);
+    it.push({ k: 'psign', x: x0 + 1.4, y: top ? y0 + B - 1.4 : y0 + 1.4 });   // 「P」の ひょうしき
   } else if (b.type === 'shop') {
     const col = ['#f3c9a0', '#bfe0f5', '#f5e39a', '#d9c7f2', '#c9ecc0'][(r() * 5) | 0];
     it.push({ k: 'shop', x: x0 + 0.5, y: y0 + 0.5, w: B - 1, h: 6.2, col, emoji: ['🍔', '🍦', '🛒', '🧸', '🍩', '⛽'][(r() * 6) | 0] });
     so.push({ x: x0 + 0.5, y: y0 + 0.5, w: B - 1, h: 6.2 });
-    spaces(y0 + B - 4.75, 4.6, .35);
+    spaces(y0 + B - 5.75, 5.6, .35);
   } else {
     it.push({ k: 'field', x: x0 + 0.4, y: y0 + 0.4, w: B - 0.8, h: B - 0.8 });
     const bx = x0 + (r() < .5 ? 0.9 : B - 4.1), by = y0 + (r() < .5 ? 0.9 : B - 4.7);
@@ -425,7 +427,7 @@ function drawBlock(c, b) {
         c.font = 'bold 1.2px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = '#fff'; c.fillText('P', o.x, o.y + 0.06);
         break;
       case 'spaces':
-        c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 0.12; c.beginPath();
+        c.strokeStyle = 'rgba(255,255,255,.9)'; c.lineWidth = 0.16; c.beginPath();
         for (let s = 0; s <= o.n; s++) { c.moveTo(o.x + s * o.w, o.y); c.lineTo(o.x + s * o.w, o.y + o.d); }
         c.stroke(); break;
       case 'pond':
