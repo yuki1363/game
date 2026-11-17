@@ -132,21 +132,15 @@ body.build #stars, body.build #guide, body.build #sizer, body.build #touch, body
 body.build #bui { display: block; }
 #bui > * { pointer-events: auto; }
 .bb { font: inherit; color: #fff; border: 0; touch-action: none; -webkit-user-select: none; user-select: none; padding: 0; }
-#bPal { position: absolute; top: max(10px, env(safe-area-inset-top)); left: 10px; display: flex; align-items: center; gap: 4px; background: rgba(0,0,0,.5); border-radius: 999px; padding: 4px; }
-#bPal .bb { width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,.22); font-size: 18px; }
-#bLab { min-width: 112px; text-align: center; font-size: 17px; white-space: nowrap; }
-#bCols { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 58px); left: 10px; display: flex; gap: 7px; background: rgba(0,0,0,.42); padding: 7px 9px; border-radius: 999px; }
+#bCols { position: absolute; top: calc(max(10px, env(safe-area-inset-top)) + 54px); left: 10px; display: flex; gap: 7px; background: rgba(0,0,0,.42); padding: 7px 9px; border-radius: 999px; }
 #bCols i { width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(255,255,255,.55); box-sizing: border-box; display: block; }
 #bCols i.on { border-color: #fff; transform: scale(1.25); box-shadow: 0 0 0 2px rgba(0,0,0,.6); }
 #bStick { position: absolute; left: 16px; bottom: max(26px, calc(env(safe-area-inset-bottom) + 12px)); width: 136px; height: 136px; border-radius: 50%; background: rgba(255,255,255,.14); border: 3px solid rgba(255,255,255,.38); touch-action: none; }
 #bKnob { position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: rgba(255,255,255,.6); pointer-events: none; }
-#bBtns { position: absolute; right: 8px; bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); width: 210px; height: 214px; pointer-events: none; }
+#bBtns { position: absolute; right: 8px; bottom: max(20px, calc(env(safe-area-inset-bottom) + 8px)); width: 110px; height: 110px; pointer-events: none; }
 #bBtns .bb { position: absolute; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; border: 3px solid rgba(255,255,255,.55); font-size: 26px; line-height: 1.05; }
 #bBtns .bb small { font-size: 11px; font-weight: 400; }
 #bJump { right: 4px; bottom: 0; width: 96px; height: 96px; background: rgba(63,127,232,.72); }
-#bBuild { right: 112px; bottom: 22px; width: 82px; height: 82px; background: rgba(57,179,107,.78); }
-#bRemove { right: 10px; bottom: 112px; width: 74px; height: 74px; background: rgba(232,100,63,.74); }
-#bUndo { right: 100px; bottom: 120px; width: 54px; height: 54px; background: rgba(120,130,145,.72); font-size: 22px; }
 #bBtns .bb.on { background: rgba(255,210,63,.92); color: #3a2a00; }
 body.padon #bStick, body.padon #bBtns { display: none; }
 .rst { font: inherit; font-size: 12px; color: #fff; background: #7a3a3a; border: 0; border-radius: 10px; padding: 8px 12px; margin-top: 8px; }
@@ -201,9 +195,9 @@ body.padon #bStick, body.padon #bBtns { display: none; }
     <h3>ブロックづくり（くるまは でません）</h3>
     <ul>
       <li>画面の左の丸（またはコントローラーの左スティック）で歩き、ジャンプで1段の段差を越えられます。画面をドラッグ（または右スティック）でカメラが回ります。</li>
-      <li>「つくる」を押すと、前に あるものを つくります。🧱ブロック・🏠いえ・🗼タワー・🏰おしろ・🌳き・🟫かべ を、◀▶（コントローラーは L / R）で選び、色は丸（ZL / ZR）で変えられます。</li>
-      <li>スタート地点のまわりの色つきボタン（🏰おしろ・🗼タワー・🏠いえ・🌷にわ・🪜かいだん・🌉はし・🏊プール・⛲ふんすい）を踏むと、同じ方角の色のついた予定地にそれが出てきます（カメラが予定地を映します）。もう1回踏むと消えます。ブロックの色の選択も反映されます。</li>
-      <li>「こわす」は前のブロックを1つ、「↶」はさいごに作ったものを取り消します（コントローラー: X=つくる、Y=こわす、十字の上=取り消し、十字の下=カメラの遠近）。</li>
+      <li>スタート地点のまわりの色つきボタン（🏰おしろ・🗼タワー・🏠いえ・🌷にわ・🪜かいだん・🌉はし・🏊プール・⛲ふんすい）を踏むと、同じ方角の色のついた予定地に、それが出てきます（カメラが予定地を映します）。一度つくったものは、そのまま残ります。</li>
+      <li>上の色の丸（コントローラーは L / R）でブロックの色を選ぶと、そのあとに建つ建物の色が変わります。</li>
+      <li>ボタンは、ボタンとボタンの間を通れば、踏まずに歩いて出られます。</li>
       <li>作ったものは、この端末に自動で保存されます。<br><button class="rst" id="bReset">ブロックの世界を リセット</button></li>
     </ul>
     <h3>ちゅうい</h3>
@@ -213,7 +207,7 @@ body.padon #bStick, body.padon #bBtns { display: none; }
       <li>コントローラーがない場合はキーボード（矢印キー / スペース）でも動かせます。</li>
     </ul>
   </details>
-  <div id="ver">v8 ・ ミニカードライブ</div>
+  <div id="ver">v9 ・ ミニカードライブ</div>
 </div>
 
 <div id="stars" class="hud">⭐ <span id="starN">0</span></div>
@@ -226,14 +220,10 @@ body.padon #bStick, body.padon #bBtns { display: none; }
 </div>
 <button id="btnHorn" data-k="horn">📢</button>
 <div id="bui">
-  <div id="bPal"><button class="bb" id="bPrev">◀</button><div id="bLab"><span id="bIcon">🧱</span> <b id="bName">ブロック</b></div><button class="bb" id="bNext">▶</button></div>
   <div id="bCols"></div>
   <div id="bStick"><i id="bKnob"></i></div>
   <div id="bBtns">
     <button class="bb" id="bJump" data-b="jump">⤒<small>ジャンプ</small></button>
-    <button class="bb" id="bBuild" data-b="build">🔨<small>つくる</small></button>
-    <button class="bb" id="bRemove" data-b="remove">💥<small>こわす</small></button>
-    <button class="bb" id="bUndo" data-b="undo">↶</button>
   </div>
 </div>
 <div id="toast"></div>
@@ -1358,10 +1348,6 @@ const PADS = [
 ];
 function bPadPos(i) { const a = PADS[i].ang * Math.PI / 180; return { x: 0.5 + 4.8 * Math.sin(a), z: 0.5 - 4.8 * Math.cos(a) }; }   // ボタンの あいだを とおれる ひろさ
 function bPlotPos(i) { return { x: PADS[i].cx + 0.5 - BHALF, z: PADS[i].cz + 0.5 - BHALF }; }
-const BITEMS = [
-  { k: 'block', name: 'ブロック', icon: '🧱' }, { k: 'house', name: 'いえ', icon: '🏠' }, { k: 'tower', name: 'タワー', icon: '🗼' },
-  { k: 'castle', name: 'おしろ', icon: '🏰' }, { k: 'tree', name: 'き', icon: '🌳' }, { k: 'wall', name: 'かべ', icon: '🟫' },
-];
 const B = {
   ready: false, item: 0, color: 1, px: 0.5, py: 0, pz: 0.5, vx: 0, vy: 0, vz: 0, ground: true, rot: Math.PI, yaw: 0, pitch: 0.5, dist: 10, zi: 1,
   walkT: 0, pads: PADS.map(() => ({ on: false, armed: true, idxs: [] })), queue: [], undo: [], dirty: true, count: 0, sx: 0, sy: 0, saveAt: 0, prevD: {}, pend: {}, qAcc: 0, camId: null, lx: 0, ly: 0, stickId: null, tick: 0,
@@ -1389,39 +1375,10 @@ function bItems(t) {
   items.sort((a, b) => a[1] - b[1] || Math.hypot(a[0] - t.ax, a[2] - t.az) - Math.hypot(b[0] - t.ax, b[2] - t.az));
   return items;
 }
-function bTarget() {
-  const pcx = Math.floor(B.px + BHALF), pcz = Math.floor(B.pz + BHALF), it = BITEMS[B.item];
-  const sx = Math.sin(B.rot), sz = Math.cos(B.rot), fx = Math.abs(sx) > Math.abs(sz) ? Math.sign(sx) : 0, fz = fx ? 0 : (Math.sign(sz) || 1);
-  let q = 0;
-  if (it.k !== 'block') for (q = 0; q < 4; q++) { const r = bRot(0, 1, q); if (r[0] === -fx && r[1] === -fz) break; }   // げんかんが こちらを むく
-  const L = bCells(it.k, q, B.color);
-  let x0 = 99, x1 = -99, z0 = 99, z1 = -99;
-  for (const c of L) { x0 = Math.min(x0, c[0]); x1 = Math.max(x1, c[0]); z0 = Math.min(z0, c[2]); z1 = Math.max(z1, c[2]); }
-  const rad = Math.max(x1, -x0, z1, -z0), ax = pcx + fx * (rad + 1), az = pcz + fz * (rad + 1);
-  const t = bPlan(L, ax, az); let ok = t.ok;
-  if (ok && it.k !== 'block') { let mn = 99, mx = -1; for (const c of L) if (c[1] === 0) { const h = bColH(ax + c[0], az + c[2]); mn = Math.min(mn, h); mx = Math.max(mx, h); } if (mn !== mx) ok = false; }   // たてものは たいらな ばしょにだけ
-  const p0x = Math.floor(B.px - 0.3 + BHALF), p1x = Math.floor(B.px + 0.3 + BHALF - 1e-4), p0z = Math.floor(B.pz - 0.3 + BHALF), p1z = Math.floor(B.pz + 0.3 + BHALF - 1e-4);
-  const p0y = Math.floor(B.py + 1e-4), p1y = Math.floor(B.py + 1.9 - 1e-4);
-  if (ok) for (const c of L) { const X = ax + c[0], Y = t.base + c[1], Z = az + c[2]; if (X >= p0x && X <= p1x && Z >= p0z && Z <= p1z && Y >= p0y && Y <= p1y) { ok = false; break; } }
-  return Object.assign(t, { ok, x0, x1, z0, z1, fx, fz });
-}
-function bDoBuild() {
-  const t = bTarget();
-  if (!t.ok) { beep(170, 0.12, 'square', 0.1); return; }
-  const act = { entries: [] }; B.undo.push(act); if (B.undo.length > 20) B.undo.shift();
-  const items = bItems(t);
-  if (items.length === 1) { bPut(act, items[0][0], items[0][1], items[0][2], items[0][3]); beep(520, 0.07, 'square', 0.12, 780); return; }
-  for (const it of items) B.queue.push({ it, act });
-  beep(330, 0.1, 'square', 0.1, 520);
-}
-// ふみボタン: ふんだ とき（1かい ふむと たつ・もう1かい ふむと きえる）
+// ふみボタン: ふんだ とき（ふむと たてものが でてくる。いちど たてたら そのまま）
 function bPadPress(i) {
   const P = PADS[i], S = B.pads[i];
-  if (S.on) {
-    B.queue = B.queue.filter(q => q.pad !== i);
-    for (const idx of S.idxs) if (BW[idx]) { BW[idx] = 0; B.count--; }
-    S.on = false; S.idxs = []; B.dirty = true; B.saveAt = performance.now() + 1500; bPadVis(i); beep(300, 0.1, 'sawtooth', 0.1, 140); B.focus = { i, t: 0 }; return;
-  }
+  if (S.on) return;   // もう たてた ボタン（きえない）
   const t = bPlan(bCells(P.k, P.q, B.color), P.cx, P.cz);
   if (!t.ok) { beep(170, 0.12, 'square', 0.1); return; }
   const act = { entries: [] }, items = bItems(t);
@@ -1432,19 +1389,6 @@ function bPadPress(i) {
 function bPadVis(i) {
   const o = B.padObj && B.padObj[i]; if (!o) return; const on = B.pads[i].on;
   o.top.material.color.set(on ? 0x39b36b : PADS[i].col); o.marker.visible = !on; o.line.visible = !on; o.sprite.material.map = on ? o.texDone : o.texReady; o.sprite.material.needsUpdate = true;
-}
-function bRemove() {
-  const pcx = Math.floor(B.px + BHALF), pcz = Math.floor(B.pz + BHALF), sx = Math.sin(B.rot), sz = Math.cos(B.rot);
-  const fx = Math.abs(sx) > Math.abs(sz) ? Math.sign(sx) : 0, fz = fx ? 0 : (Math.sign(sz) || 1), X = pcx + fx, Z = pcz + fz, h = bColH(X, Z);
-  if (!bIn(X, 0, Z) || h === 0) { beep(170, 0.1, 'square', 0.1); return; }
-  const act = { entries: [] }; bPut(act, X, h - 1, Z, 0); B.undo.push(act); if (B.undo.length > 20) B.undo.shift();
-  beep(300, 0.09, 'sawtooth', 0.1, 140);
-}
-function bUndo() {
-  const act = B.undo.pop(); if (!act) { beep(170, 0.1, 'square', 0.1); return; }
-  B.queue = B.queue.filter(q => q.act !== act);
-  for (let i = act.entries.length - 1; i >= 0; i--) { const e = act.entries[i], now = BW[e[0]]; BW[e[0]] = e[1]; B.count += (e[1] ? 1 : 0) - (now ? 1 : 0); }
-  B.dirty = true; B.saveAt = performance.now() + 1500; beep(440, 0.1, 'sine', 0.12, 260);
 }
 function bPlaceDirect(k, cx, cz, col) {   // さいしょの せかい用: すぐに おく
   const L = BT[k]().map(c => [cx + c[0], c[1], cz + c[2], c[3] === SEL ? col : c[3]]);
@@ -1481,12 +1425,9 @@ function bHit(px, py, pz) {
   return false;
 }
 function bHud() {
-  const it = BITEMS[B.item];
-  $('bIcon').textContent = it.icon; $('bName').textContent = it.name;
   document.querySelectorAll('#bCols i').forEach((el, n) => el.classList.toggle('on', n + 1 === B.color));
   if (B.ready && B.torso) B.torso.material.color.set(BCOL[B.color]);
 }
-function bSetItem(d) { B.item = (B.item + d + BITEMS.length) % BITEMS.length; bHud(); beep(700, 0.05, 'sine', 0.1); }
 function bSetColor(c) { B.color = ((c - 1 + 8) % 8) + 1; bHud(); beep(900, 0.05, 'sine', 0.1); }
 
 function bInit() {
@@ -1528,13 +1469,9 @@ function bInit() {
   B.legL = limb(0.36, 0.62, 0.36, 0x3f7fe8, -0.2, 0.62); B.legR = limb(0.36, 0.62, 0.36, 0x3f7fe8, 0.2, 0.62);
   sc.add(av); B.av = av;
   B.shadow = new THREE.Mesh(new THREE.CircleGeometry(0.5, 16), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.28, depthWrite: false })); B.shadow.rotation.x = -Math.PI / 2; sc.add(B.shadow);
-  const cur = new THREE.Group(), box = new THREE.BoxGeometry(1, 1, 1);
-  B.curFill = new THREE.Mesh(box, new THREE.MeshBasicMaterial({ color: 0x44ff88, transparent: true, opacity: 0.28, depthWrite: false }));
-  B.curLine = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: 0xffffff }));
-  cur.add(B.curFill); cur.add(B.curLine); sc.add(cur); B.cur = cur;
   const ctex = (w, h, draw) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d')); return new THREE.CanvasTexture(c); };
   const rrect = (g, x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
-  const label = (P, done) => ctex(256, 128, g => { g.fillStyle = done ? '#39b36b' : P.col; rrect(g, 4, 4, 248, 120, 26); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 6; g.stroke(); g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.font = '64px sans-serif'; g.fillText(P.icon, 16, 66); g.font = 'bold 38px sans-serif'; g.fillText(P.name, 96, done ? 46 : 66); if (done) { g.font = 'bold 24px sans-serif'; g.fillText('✓ ふむと けす', 96, 96); } });
+  const label = (P, done) => ctex(256, 128, g => { g.fillStyle = done ? '#39b36b' : P.col; rrect(g, 4, 4, 248, 120, 26); g.fill(); g.strokeStyle = '#fff'; g.lineWidth = 6; g.stroke(); g.fillStyle = '#fff'; g.textBaseline = 'middle'; g.font = '64px sans-serif'; g.fillText(P.icon, 16, 66); g.font = 'bold 38px sans-serif'; g.fillText(P.name, 96, done ? 46 : 66); if (done) { g.font = 'bold 24px sans-serif'; g.fillText('✓ できた', 96, 96); } });
   B.padObj = PADS.map((P, i) => {
     const wp = bPadPos(i), pcx = P.cx + 0.5 - BHALF, pcz = P.cz + 0.5 - BHALF, col = new THREE.Color(P.col);
     const base = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.2, 2.4), new THREE.MeshLambertMaterial({ color: 0x5a6068 })); base.position.set(wp.x, 0.1, wp.z); sc.add(base);
@@ -1549,7 +1486,6 @@ function bInit() {
   B.R = R; B.sc = sc; B.cam = cam; B.clouds = clouds; B.ready = true;
   // がめんの ボタン
   const cols = $('bCols'); cols.innerHTML = ''; for (let n = 1; n <= 8; n++) { const i = document.createElement('i'); i.style.background = BCOL[n]; i.addEventListener('pointerdown', e => { e.preventDefault(); bSetColor(n); initAudio(); }); cols.appendChild(i); }
-  $('bPrev').addEventListener('pointerdown', e => { e.preventDefault(); bSetItem(-1); initAudio(); }); $('bNext').addEventListener('pointerdown', e => { e.preventDefault(); bSetItem(1); initAudio(); });
   document.querySelectorAll('#bBtns .bb').forEach(el => {
     const k = el.dataset.b;
     el.addEventListener('pointerdown', e => { e.preventDefault(); try { el.setPointerCapture(e.pointerId); } catch (err) {} el.classList.add('on'); initAudio(); if (k === 'jump') B.pend.jumpHeld = true; else B.pend[k] = true; });
@@ -1574,19 +1510,18 @@ function bResize() { if (!B.ready) return; B.R.setSize(W, H, false); B.cam.aspec
 function bInput() {
   const I = { mx: 0, my: 0, cx: 0, cy: 0, jump: false, edge: {} };
   const lk = c => { const v = !!(keys[c] || latch[c]); latch[c] = false; return v; };   // はやく おして はなした キーも とりこぼさない
-  const d = { build: lk('KeyE') || lk('Enter'), remove: lk('KeyQ') || lk('Backspace'), undo: lk('KeyZ'), itemP: lk('BracketLeft'), itemN: lk('BracketRight'), colP: lk('Comma'), colN: lk('Period'), menu: lk('Escape'), zoom: lk('KeyX') };
+  const d = { colP: lk('Comma') || lk('BracketLeft'), colN: lk('Period') || lk('BracketRight'), menu: lk('Escape'), zoom: lk('KeyX') };
   if (keys.KeyA || keys.ArrowLeft) I.mx -= 1; if (keys.KeyD || keys.ArrowRight) I.mx += 1; if (keys.KeyW || keys.ArrowUp) I.my -= 1; if (keys.KeyS || keys.ArrowDown) I.my += 1;
   if (keys.KeyJ) I.cx -= 1; if (keys.KeyL) I.cx += 1;
   I.jump = !!keys.Space || !!B.pend.jumpHeld; I.mx += B.sx; I.my += B.sy;
-  if (B.pend.build) d.build = true; if (B.pend.remove) d.remove = true; if (B.pend.undo) d.undo = true; B.pend.build = B.pend.remove = B.pend.undo = false;
   let found = false;
   for (const p of (navigator.getGamepads ? navigator.getGamepads() : [])) {
     if (!p || !p.connected) continue; found = true;
     const b = n => { const q = p.buttons[n]; return q ? (q.pressed ? 1 : (q.value || 0)) : 0; };
     I.mx += dz(p.axes[0] || 0); I.my += dz(p.axes[1] || 0); I.cx += dz(p.axes[2] || 0); I.cy += dz(p.axes[3] || 0);
     if (b(0) > 0.5 || b(1) > 0.5) I.jump = true;
-    if (b(3) > 0.5) d.build = true; if (b(2) > 0.5) d.remove = true; if (b(4) > 0.5) d.itemP = true; if (b(5) > 0.5) d.itemN = true; if (b(6) > 0.5) d.colP = true; if (b(7) > 0.5) d.colN = true;
-    if (b(12) > 0.5) d.undo = true; if (b(13) > 0.5) d.zoom = true; if (b(8) > 0.5 || b(9) > 0.5) d.menu = true; if (b(14) > 0.5) I.cx -= 1; if (b(15) > 0.5) I.cx += 1;
+    if (b(4) > 0.5 || b(6) > 0.5) d.colP = true; if (b(5) > 0.5 || b(7) > 0.5) d.colN = true;
+    if (b(13) > 0.5) d.zoom = true; if (b(8) > 0.5 || b(9) > 0.5) d.menu = true; if (b(14) > 0.5) I.cx -= 1; if (b(15) > 0.5) I.cx += 1;
   }
   if (found !== padConnected) { padConnected = found; document.body.classList.toggle('padon', found); $('pad').className = found ? 'ok' : ''; $('pad').textContent = found ? '🎮 コントローラー つながったよ！ ←→でえらんで Aでスタート' : '🎮 コントローラーの ボタンを 1かい おしてね'; }
   for (const k in d) I.edge[k] = d[k] && !B.prevD[k]; B.prevD = d;
@@ -1595,8 +1530,7 @@ function bInput() {
 }
 function bStep(dt, I) {
   dt = Math.min(dt, 0.05); B.tick += dt; B.dt = dt;
-  if (I.edge.build) bDoBuild(); if (I.edge.remove) bRemove(); if (I.edge.undo) bUndo();
-  if (I.edge.itemP) bSetItem(-1); if (I.edge.itemN) bSetItem(1); if (I.edge.colP) bSetColor(B.color - 1); if (I.edge.colN) bSetColor(B.color + 1);
+  if (I.edge.colP) bSetColor(B.color - 1); if (I.edge.colN) bSetColor(B.color + 1);
   if (I.edge.zoom) { B.zi = (B.zi + 1) % 3; B.dist = [6.5, 10, 14][B.zi]; }
   B.yaw -= I.cx * 2.2 * dt; B.pitch = clamp(B.pitch + I.cy * 1.6 * dt, 0.15, 1.35);
   // つくっている さいちゅうの ブロックを ひとつずつ おく
@@ -1640,9 +1574,6 @@ function bRebuild() {
   mesh.count = n; mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
 }
 function bRender() {
-  const t = bTarget(), cur = B.cur;
-  cur.position.set(t.ax - BHALF + 0.5 + (t.x0 + t.x1) / 2, t.base + (t.y1 + 1) / 2, t.az - BHALF + 0.5 + (t.z0 + t.z1) / 2);
-  cur.scale.set(t.x1 - t.x0 + 1.02, t.y1 + 1.02, t.z1 - t.z0 + 1.02); B.curFill.material.color.set(t.ok ? 0x44ff88 : 0xff5544); B.curLine.material.color.set(t.ok ? 0xffffff : 0xff8877);
   let gy = 0; { const cx = Math.floor(B.px + BHALF), cz = Math.floor(B.pz + BHALF); for (let y = Math.min(BH - 1, Math.floor(B.py + 0.5)); y >= 0; y--) if (bIn(cx, y, cz) && BW[bi(cx, y, cz)]) { gy = y + 1; break; } }
   B.shadow.position.set(B.px, gy + 0.03, B.pz); B.shadow.scale.setScalar(clamp(1 - (B.py - gy) * 0.12, 0.4, 1));
   // ふんだ ボタンの よていちを カメラが うつす（すぐに もとの むきに もどる）
