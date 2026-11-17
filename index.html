@@ -1797,7 +1797,8 @@ function bRender() {
   const cp = Math.cos(pitch);
   const ux = Math.sin(yaw) * cp, uy = Math.sin(pitch), uz = Math.cos(yaw) * cp;
   let d = dist;   // かべが あると カメラを てまえに よせる
-  for (let q = 0.8; q <= dist; q += 0.3) { const X = Math.floor(tx + ux * q + BHALF), Y = Math.floor(ty + uy * q), Z = Math.floor(tz + uz * q + BHALF); if (bIn(X, Y, Z) && BW[bi(X, Y, Z)]) { d = Math.max(3.2, q - 0.5); break; } }
+  // よていちを うつしている あいだは、かべで カメラを よせない
+  if (fk < 0.25) for (let q = 0.8; q <= dist; q += 0.3) { const X = Math.floor(tx + ux * q + BHALF), Y = Math.floor(ty + uy * q), Z = Math.floor(tz + uz * q + BHALF); if (bIn(X, Y, Z) && BW[bi(X, Y, Z)]) { d = Math.max(3.2, q - 0.5); break; } }
   B.cd = B.cd === undefined ? d : B.cd + (d - B.cd) * Math.min(1, (B.dt || 0.016) * 12);
   B.cam.position.set(tx + ux * B.cd, ty + uy * B.cd, tz + uz * B.cd); B.cam.lookAt(tx, ty, tz);
   if (B.padObj) B.padObj.forEach((o, i) => { o.sprite.position.y = 2.5 + Math.sin(B.tick * 2 + i) * 0.1; const dd = B.cam.position.distanceTo(o.sprite.position), k = clamp(dd / 11, 0.42, 1); o.sprite.visible = dd < 46; o.sprite.scale.set(2.1 * k, 1.05 * k, 1); });   // ちかい なふだは ちいさく
